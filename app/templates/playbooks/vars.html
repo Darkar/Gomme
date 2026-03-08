@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gomme — Variables — {{.Playbook.Name}}</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <div class="app-layout">
+
+    <nav class="navbar">
+      <span class="nav-brand">Gomme</span>
+      <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/inventory/list">Inventaire</a>
+        <a href="/repository">Repositories</a>
+        <a href="/playbooks" class="active">Playbooks</a>
+        <a href="/tasks">Tâches</a>
+        <a href="/organizations">Organisations</a>
+        <a href="/credentials">Identifiants</a>
+        {{if .User.IsAdmin}}<a href="/admin/users">Admin</a>{{end}}
+      </div>
+      <div class="nav-user">
+        <a href="/change-password" style="color:var(--text-muted);font-size:13px;text-decoration:none">{{.User.Username}}</a>
+        <a href="/logout">Déconnexion</a>
+      </div>
+    </nav>
+
+    <div class="content-layout" style="overflow-y:auto;">
+      <div class="page-content" style="max-width:860px">
+
+        <div class="page-header">
+          <h1 class="page-title">Variables — {{.Playbook.Name}}</h1>
+          <div style="display:flex;gap:8px;">
+            <a href="/playbooks/{{.Playbook.ID}}/survey" class="btn">Survey</a>
+            <a href="/playbooks/{{.Playbook.ID}}" class="btn">Lancer</a>
+            <a href="/playbooks" class="btn">← Retour</a>
+          </div>
+        </div>
+
+        {{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
+        {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+
+        <form method="POST" action="/playbooks/{{.Playbook.ID}}/vars">
+          <div class="section">
+            <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
+              <span>Variables extra-vars / Credentials</span>
+              <button type="button" class="btn btn-sm" onclick="addRow()">+ Ajouter</button>
+            </div>
+            <div class="section-body">
+              <div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;margin-bottom:8px">
+                <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">Clé</span>
+                <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">Valeur</span>
+                <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">Chiffré</span>
+                <span></span>
+              </div>
+              <div id="vars-list">
+                {{range .Vars}}
+                <div class="var-row">
+                  <input type="text" name="key" value="{{.Key}}" placeholder="ma_variable">
+                  <input type="{{if .Encrypted}}password{{else}}text{{end}}" name="value" value="{{if .Encrypted}}••••••••{{else}}{{.Value}}{{end}}" placeholder="valeur">
+                  <label class="form-check">
+                    <input type="checkbox" name="encrypted" {{if .Encrypted}}checked{{end}}> Chiffrer
+                  </label>
+                  <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.var-row').remove()">✕</button>
+                </div>
+                {{end}}
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+            <a href="/playbooks" class="btn">Annuler</a>
+            <button type="submit" class="btn btn-primary">Enregistrer</button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function addRow() {
+      const div = document.createElement('div');
+      div.className = 'var-row';
+      div.innerHTML = `
+        <input type="text" name="key" placeholder="ma_variable">
+        <input type="text" name="value" placeholder="valeur">
+        <label class="form-check"><input type="checkbox" name="encrypted"> Chiffrer</label>
+        <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.var-row').remove()">✕</button>
+      `;
+      document.getElementById('vars-list').appendChild(div);
+    }
+  </script>
+</body>
+</html>

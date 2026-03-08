@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gomme — {{.Playbook.Name}}</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <style>
+    .var-row {
+      display:grid; gap:8px; align-items:center; margin-bottom:8px;
+    }
+    .var-row { grid-template-columns: 1fr 1fr auto; }
+    .survey-field { border:1px solid var(--border); border-radius:6px; overflow:hidden; margin-bottom:10px; }
+    .survey-field-header { display:grid; grid-template-columns:2fr 1fr 140px auto auto; gap:8px; align-items:center; padding:10px 12px; }
+    .survey-options { padding:10px 12px; background:var(--bg-2); border-top:1px solid var(--border); }
+    .opt-row { display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:center; margin-bottom:6px; }
+    .cred-row { grid-template-columns: 1fr 1fr 1fr auto; }
+    .form-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+
+    <nav class="navbar">
+      <span class="nav-brand">Gomme</span>
+      <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/inventory/list">Inventaire</a>
+        <a href="/repository">Repositories</a>
+        <a href="/playbooks" class="active">Playbooks</a>
+        <a href="/tasks">Tâches</a>
+        <a href="/organizations">Organisations</a>
+        <a href="/credentials">Identifiants</a>
+        {{if .User.IsAdmin}}<a href="/admin/users">Admin</a>{{end}}
+      </div>
+      <div class="nav-user">
+        <a href="/change-password" style="color:var(--text-muted);font-size:13px;text-decoration:none">{{.User.Username}}</a>
+        <a href="/logout">Déconnexion</a>
+      </div>
+    </nav>
+
+    <div class="content-layout" style="overflow-y:auto;">
+      <div class="page-content">
+
+        <!-- En-tête -->
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">{{.Playbook.Name}}</h1>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
+              <code>{{.Playbook.Repository.Name}} / {{.Playbook.Path}}</code>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            {{if .SurveyFields}}
+            <button type="button" class="btn btn-primary" onclick="openLaunch()">▶ Lancer</button>
+            {{else}}
+            <form method="POST" action="/playbooks/{{.Playbook.ID}}/run" style="display:inline">
+              <button type="submit" class="btn btn-primary">▶ Lancer</button>
+            </form>
+            {{end}}
+            <a href="/playbooks" class="btn">← Retour</a>
+          </div>
+        </div>
+
+        {{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
+        {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+
+        <!-- Tab nav -->
+        <div class="edit-tabs" id="tab-nav" data-initial="{{.Tab}}">
+          <button class="tab-btn" data-tab="general">Général</button>
+          <button class="tab-btn" data-tab="inventories">
+            Inventaires<span class="count-badge" id="badge-inventories">{{len .LinkedInventories}}</span>
+          </button>
+          <button class="tab-btn" data-tab="vars">
+            Variables<span class="count-badge" id="badge-vars">{{len .Vars}}</span>
+          </button>
+          <button class="tab-btn" data-tab="survey">
+            Formulaire<span class="count-badge" id="badge-survey">{{len .SurveyFields}}</span>
+          </button>
+          <button class="tab-btn" data-tab="credentials">
+            Identifiants<span class="count-badge" id="badge-credentials">{{len .Playbook.Credentials}}</span>
+          </button>
+          <button class="tab-btn" data-tab="schedule">
+            Planification<span class="count-badge" id="badge-schedule">{{len .ScheduledTasks}}</span>
+          </button>
+        </div>
+
+        <!-- ── Tab Général ── -->
+        <div class="tab-panel" id="tab-general">
+          <form id="form-general" method="POST" action="/playbooks/{{.Playbook.ID}}/edit">
+
+            <div class="section" style="margin-bottom:16px">
+              <div class="section-header">Informations</div>
+              <div class="section-body">
+                <div class="form-group">
+                  <label>Nom</label>
+                  <input type="text" name="name" value="{{.Playbook.Name}}" required>
+                </div>
+                <div class="form-group">
+                  <label>Description</label>
+                  <textarea name="description" rows="2" style="resize:vertical">{{.Playbook.Description}}</textarea>
+                </div>
+
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label>Repository</label>
+                    <select name="repository_id" id="repo-select" onchange="onRepoChange(this.value)">
+                      {{range .Repositories}}
+                      <option value="{{.ID}}" {{if eq .ID $.Playbook.RepositoryID}}selected{{end}}>{{.Name}}</option>
+                      {{end}}
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Fichier playbook</label>
+                    <select name="path" id="file-select">
+                      {{if .RepoFiles}}
+                        {{range .RepoFiles}}
+                        <option value="{{.}}" {{if eq . $.Playbook.Path}}selected{{end}}>{{.}}</option>
+                        {{end}}
+                      {{else}}
+                        <option value="{{.Playbook.Path}}">{{.Playbook.Path}}</option>
+                      {{end}}
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Organisation</label>
+                  <select name="organization_id">
+                    <option value="">— Aucune —</option>
+                    {{range .Organizations}}
+                    <option value="{{.ID}}" {{if eq .ID $.OrganizationID}}selected{{end}}>{{.Name}}</option>
+                    {{end}}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="section" style="margin-bottom:16px">
+              <div class="section-header">Configuration d'exécution</div>
+              <div class="section-body">
+                <div class="form-group">
+                  <label>Image Docker Ansible</label>
+                  <select name="docker_image">
+                    <option value="">— Sélectionner —</option>
+                    {{range .DockerImages}}
+                    <option value="{{.Name}}" {{if eq .Name $.Playbook.DockerImage}}selected{{end}}>{{.Name}}</option>
+                    {{end}}
+                  </select>
+                  {{if .Playbook.DockerImage}}
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Actuelle : <code>{{.Playbook.DockerImage}}</code></div>
+                  {{end}}
+                </div>
+                <div class="form-group">
+                  <label>Limit <span style="color:var(--text-muted);font-weight:normal;font-size:11px">(optionnel — ex: host1,group2)</span></label>
+                  <input type="text" name="default_limit" value="{{.Playbook.DefaultLimit}}" placeholder="ex: web_servers,db1">
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <button type="button" class="btn btn-danger"
+                onclick="if(confirm('Supprimer ce playbook définitivement ?')) document.getElementById('form-delete').submit()">
+                Supprimer
+              </button>
+              <button type="submit" class="btn btn-primary">Enregistrer</button>
+            </div>
+          </form>
+
+          <form id="form-delete" method="POST" action="/playbooks/{{.Playbook.ID}}/delete" style="display:none"></form>
+        </div>
+
+        <!-- ── Tab Inventaires ── -->
+        <div class="tab-panel" id="tab-inventories">
+          <div class="section" style="margin-bottom:16px">
+            <div class="section-header">Inventaires associés à ce playbook</div>
+            <div class="section-body">
+              {{if .LinkedInventories}}
+              <table class="data-table" style="margin-bottom:0">
+                <thead>
+                  <tr>
+                    <th>Inventaire</th>
+                    <th>Filtre de groupe</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{range .LinkedInventories}}
+                  <tr>
+                    <td>{{.Inventory.Name}}</td>
+                    <td>{{if .GroupFilter}}<code>{{.GroupFilter}}</code>{{else}}<span style="color:var(--text-muted)">—</span>{{end}}</td>
+                    <td style="text-align:right">
+                      <form method="POST" action="/playbooks/{{$.Playbook.ID}}/inventories/{{.ID}}/delete" style="display:inline">
+                        <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+                      </form>
+                    </td>
+                  </tr>
+                  {{end}}
+                </tbody>
+              </table>
+              {{else}}
+              <div style="color:var(--text-muted);text-align:center;padding:16px">Aucun inventaire associé.</div>
+              {{end}}
+            </div>
+          </div>
+          <div class="section">
+            <div class="section-header">Ajouter un inventaire</div>
+            <div class="section-body">
+              <form method="POST" action="/playbooks/{{.Playbook.ID}}/inventories">
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label>Inventaire</label>
+                    <select name="inventory_id" required>
+                      <option value="">— Choisir —</option>
+                      {{range .Inventories}}
+                      <option value="{{.ID}}">{{.Name}}</option>
+                      {{end}}
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Filtre de groupe <span style="color:var(--text-muted);font-weight:normal;font-size:11px">(optionnel)</span></label>
+                    <input type="text" name="group_filter" placeholder="ex: web_servers">
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Ajouter</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Tab Variables ── -->
+        <div class="tab-panel" id="tab-vars">
+          <form method="POST" action="/playbooks/{{.Playbook.ID}}/vars">
+            <div class="section">
+              <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
+                <span>Variables extra-vars / Credentials</span>
+                <button type="button" class="btn btn-sm" onclick="addVar()">+ Ajouter</button>
+              </div>
+              <div class="section-body">
+                <div class="var-row" style="margin-bottom:4px">
+                  <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">Clé</span>
+                  <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">Valeur</span>
+                  <span></span>
+                </div>
+                <div id="vars-list">
+                  {{range .Vars}}
+                  <div class="var-row">
+                    <input type="text" name="key" value="{{.Key}}" placeholder="ma_variable">
+                    <input type="text" name="value" value="{{.Value}}" placeholder="valeur">
+                    <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.var-row').remove();updateBadge('vars')">✕</button>
+                  </div>
+                  {{end}}
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:12px">
+              <button type="submit" class="btn btn-primary">Enregistrer les variables</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- ── Tab Survey ── -->
+        <div class="tab-panel" id="tab-survey">
+          <form method="POST" action="/playbooks/{{.Playbook.ID}}/survey">
+            <div class="section">
+              <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
+                <span>Formulaire de lancement (survey)</span>
+                <button type="button" class="btn btn-sm" onclick="addField()">+ Ajouter un champ</button>
+              </div>
+              <div class="section-body">
+                <div id="fields-list">
+                  {{range .SurveyFields}}
+                  <div class="survey-field">
+                    <div class="survey-field-header">
+                      <input type="text" name="label" value="{{.Label}}" placeholder="Label affiché">
+                      <input type="text" name="var_name" value="{{.VarName}}" placeholder="nom_variable">
+                      <select name="type" onchange="onTypeChange(this)">
+                        <option value="text"     {{if eq .Type "text"}}selected{{end}}>Texte</option>
+                        <option value="textarea" {{if eq .Type "textarea"}}selected{{end}}>Multiligne</option>
+                        <option value="select"   {{if eq .Type "select"}}selected{{end}}>Liste</option>
+                        <option value="bool"     {{if eq .Type "bool"}}selected{{end}}>Booléen</option>
+                      </select>
+                      <label class="form-check"><input type="checkbox" name="required" {{if .Required}}checked{{end}}></label>
+                      <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.survey-field').remove();updateBadge('survey')">✕</button>
+                    </div>
+                    <div class="survey-options"{{if ne .Type "select"}} style="display:none"{{end}}>
+                      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px">
+                        <span>Nom affiché</span><span>Valeur</span><span></span>
+                      </div>
+                      <div class="survey-opts-list">
+                        {{range splitOpts .Options}}
+                        <div class="opt-row">
+                          <input type="text" class="opt-name" placeholder="Nom affiché" value="{{index . 0}}">
+                          <input type="text" class="opt-value" placeholder="Valeur" value="{{index . 1}}">
+                          <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.opt-row').remove()">✕</button>
+                        </div>
+                        {{end}}
+                      </div>
+                      <button type="button" class="btn btn-sm" style="margin-top:6px" onclick="addOption(this.previousElementSibling)">+ Option</button>
+                      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+                        <label style="font-size:11px;font-weight:600;white-space:nowrap;color:var(--text-muted)">Défaut :</label>
+                        <input type="text" name="default" value="{{.Default}}" placeholder="Valeur sélectionnée par défaut" style="flex:1">
+                      </div>
+                      <input type="hidden" name="options" value="">
+                    </div>
+                  </div>
+                  {{end}}
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:12px">
+              <button type="submit" class="btn btn-primary">Enregistrer le formulaire</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- ── Tab Identifiants ── -->
+        <div class="tab-panel" id="tab-credentials">
+          <form method="POST" action="/playbooks/{{.Playbook.ID}}/credentials">
+            <div class="section">
+              <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
+                <span>Identifiants liés à ce playbook</span>
+                <a href="/credentials" class="btn btn-sm">Gérer les identifiants</a>
+              </div>
+              <div class="section-body">
+                {{if .AvailableCredentials}}
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
+                  {{range .AvailableCredentials}}
+                  <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:var(--bg-1)">
+                    <input type="checkbox" name="credential_id" value="{{.ID}}" {{if index $.LinkedCredentialIDs .ID}}checked{{end}} style="margin-top:2px">
+                    <div>
+                      <div style="font-weight:500">{{.Name}}</div>
+                      <div style="font-size:12px;color:var(--text-muted)">
+                        {{len .Fields}} champ(s)
+                        {{if .Organization}} · <span class="badge badge-host">{{.Organization.Name}}</span>{{else}} · Personnel{{end}}
+                      </div>
+                    </div>
+                  </label>
+                  {{end}}
+                </div>
+                {{else}}
+                <div style="color:var(--text-muted);text-align:center;padding:24px">
+                  Aucun identifiant disponible. <a href="/credentials">Créer des identifiants</a>
+                </div>
+                {{end}}
+                <div style="font-size:11px;color:var(--text-muted);margin-top:12px">
+                  Les identifiants cochés sont injectés dans l'environnement Ansible sous la forme <code>NOM_LOGIN</code> et <code>NOM_PASSWORD</code>.
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:12px">
+              <button type="submit" class="btn btn-primary">Enregistrer les liens</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- ── Tab Planification ── -->
+        <div class="tab-panel" id="tab-schedule">
+          <div class="section">
+            <div class="section-header">Tâches planifiées</div>
+            <div class="section-body">
+              {{if .ScheduledTasks}}
+              <table class="data-table" style="margin-bottom:0">
+                <thead>
+                  <tr>
+                    <th>Nom</th>
+                    <th>Expression cron</th>
+                    <th>Actif</th>
+                    <th>Dernière exécution</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{range .ScheduledTasks}}
+                  <tr>
+                    <td>{{.Name}}</td>
+                    <td><code>{{.CronExpr}}</code></td>
+                    <td>
+                      <form method="POST" action="/tasks/{{.ID}}/toggle" style="display:inline">
+                        <input type="hidden" name="source" value="playbook">
+                        <input type="hidden" name="playbook_id" value="{{$.Playbook.ID}}">
+                        <button type="submit" class="btn btn-sm {{if .Enabled}}btn-primary{{end}}">
+                          {{if .Enabled}}Actif{{else}}Inactif{{end}}
+                        </button>
+                      </form>
+                    </td>
+                    <td style="color:var(--text-muted);font-size:12px">
+                      {{if .LastRunAt}}{{.LastRunAt.Format "02/01/2006 15:04"}}{{else}}—{{end}}
+                    </td>
+                    <td style="text-align:right">
+                      <form method="POST" action="/tasks/{{.ID}}/delete" style="display:inline">
+                        <input type="hidden" name="source" value="playbook">
+                        <input type="hidden" name="playbook_id" value="{{$.Playbook.ID}}">
+                        <button type="submit" class="btn btn-sm btn-danger"
+                          onclick="return confirm('Supprimer cette tâche ?')">Supprimer</button>
+                      </form>
+                    </td>
+                  </tr>
+                  {{end}}
+                </tbody>
+              </table>
+              {{else}}
+              <div style="color:var(--text-muted);text-align:center;padding:16px">Aucune tâche planifiée.</div>
+              {{end}}
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  {{if .SurveyFields}}
+  <!-- Modal lancement (survey uniquement) -->
+  <div class="modal-overlay" id="modal-launch" onclick="if(event.target===this)closeLaunch()">
+    <div class="modal" style="max-width:560px">
+      <div class="modal-header">
+        <h2 class="modal-title">▶ {{.Playbook.Name}}</h2>
+        <button class="modal-close" onclick="closeLaunch()">✕</button>
+      </div>
+      <form method="POST" action="/playbooks/{{.Playbook.ID}}/run">
+        <div class="modal-body">
+          {{range .SurveyFields}}{{$f := .}}
+          <div class="form-group">
+            <label>{{.Label}}{{if .Required}} <span style="color:var(--accent)">*</span>{{end}}</label>
+            {{if eq .Type "bool"}}
+            <label class="form-check"><input type="checkbox" name="survey_{{.VarName}}"> Activer</label>
+            {{else if eq .Type "select"}}
+            <select name="survey_{{.VarName}}" {{if .Required}}required{{end}}>
+              <option value="">— Choisir —</option>
+              {{range splitOpts .Options}}
+              <option value="{{index . 1}}" {{if eq (index . 1) $f.Default}}selected{{end}}>{{index . 0}}</option>
+              {{end}}
+            </select>
+            {{else if eq .Type "textarea"}}
+            <textarea name="survey_{{.VarName}}" rows="3" style="resize:vertical" {{if .Required}}required{{end}}></textarea>
+            {{else}}
+            <input type="text" name="survey_{{.VarName}}" {{if .Required}}required{{end}}>
+            {{end}}
+          </div>
+          {{end}}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" onclick="closeLaunch()">Annuler</button>
+          <button type="submit" class="btn btn-primary">▶ Lancer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {{end}}
+
+  <script>
+    function openLaunch() { document.getElementById('modal-launch').classList.add('open'); }
+    function closeLaunch() { document.getElementById('modal-launch').classList.remove('open'); }
+
+    // Avant soumission du formulaire survey :
+    // - sérialiser les options des champs de type "liste" dans l'input caché
+    // - aligner les checkboxes "required" non cochées avec un champ caché "off"
+    document.querySelector('#tab-survey form').addEventListener('submit', function() {
+      document.querySelectorAll('#fields-list .survey-field').forEach(field => {
+        const optsInput = field.querySelector('input[name="options"]');
+        if (optsInput) {
+          const lines = [];
+          field.querySelectorAll('.opt-row').forEach(row => {
+            const name = row.querySelector('.opt-name').value.trim();
+            const value = row.querySelector('.opt-value').value.trim();
+            if (name || value) lines.push(name + '|' + value);
+          });
+          optsInput.value = lines.join('\n');
+        }
+        const cb = field.querySelector('input[name="required"]');
+        if (cb && !cb.checked) {
+          const h = document.createElement('input');
+          h.type = 'hidden'; h.name = 'required'; h.value = 'off';
+          field.querySelector('.survey-field-header').appendChild(h);
+        }
+      });
+    });
+
+    // ── Tabs ──
+    const tabBtns  = document.querySelectorAll('.tab-btn');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+    const initialTab = document.getElementById('tab-nav').dataset.initial || 'general';
+
+    function activateTab(name) {
+      tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+      tabPanels.forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+      history.replaceState(null, '', location.pathname + '?tab=' + name +
+        ({{if .Success}}'&success={{.Success}}'{{else}}''{{end}}));
+    }
+    tabBtns.forEach(b => b.addEventListener('click', () => activateTab(b.dataset.tab)));
+    activateTab(initialTab);
+
+    // ── Badge counters ──
+    function updateBadge(tab) {
+      if (tab === 'vars') {
+        document.getElementById('badge-vars').textContent = document.querySelectorAll('#vars-list .var-row').length;
+      } else if (tab === 'survey') {
+        document.getElementById('badge-survey').textContent = document.querySelectorAll('#fields-list .survey-field').length;
+      } else if (tab === 'credentials') {
+        document.getElementById('badge-credentials').textContent =
+          document.querySelectorAll('#tab-credentials input[name="credential_id"]:checked').length;
+      } else if (tab === 'inventories') {
+        document.getElementById('badge-inventories').textContent =
+          document.querySelectorAll('#tab-inventories tbody tr').length;
+      }
+    }
+
+    // Met à jour le badge identifiants quand une checkbox change
+    document.querySelector('#tab-credentials').addEventListener('change', () => updateBadge('credentials'));
+
+    // ── Add var ──
+    function addVar() {
+      const div = document.createElement('div');
+      div.className = 'var-row';
+      div.innerHTML = `
+        <input type="text" name="key" placeholder="ma_variable">
+        <input type="text" name="value" placeholder="valeur">
+        <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.var-row').remove();updateBadge('vars')">✕</button>
+      `;
+      document.getElementById('vars-list').appendChild(div);
+      updateBadge('vars');
+    }
+
+    // ── Survey : show/hide options editor when type changes ──
+    function onTypeChange(select) {
+      const optsDiv = select.closest('.survey-field').querySelector('.survey-options');
+      optsDiv.style.display = select.value === 'select' ? '' : 'none';
+    }
+
+    // ── Survey : ajouter une option dans l'éditeur de liste ──
+    function addOption(list) {
+      const row = document.createElement('div');
+      row.className = 'opt-row';
+      row.innerHTML = `
+        <input type="text" class="opt-name" placeholder="Nom affiché">
+        <input type="text" class="opt-value" placeholder="Valeur">
+        <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.opt-row').remove()">✕</button>
+      `;
+      list.appendChild(row);
+    }
+
+    // ── Add survey field ──
+    function addField() {
+      const div = document.createElement('div');
+      div.className = 'survey-field';
+      div.innerHTML = `
+        <div class="survey-field-header">
+          <input type="text" name="label" placeholder="Label affiché">
+          <input type="text" name="var_name" placeholder="nom_variable">
+          <select name="type" onchange="onTypeChange(this)">
+            <option value="text">Texte</option>
+            <option value="textarea">Multiligne</option>
+            <option value="select">Liste</option>
+            <option value="bool">Booléen</option>
+          </select>
+          <label class="form-check"><input type="checkbox" name="required"></label>
+          <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.survey-field').remove();updateBadge('survey')">✕</button>
+        </div>
+        <div class="survey-options" style="display:none">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px">
+            <span>Nom affiché</span><span>Valeur</span><span></span>
+          </div>
+          <div class="survey-opts-list"></div>
+          <button type="button" class="btn btn-sm" style="margin-top:6px" onclick="addOption(this.previousElementSibling)">+ Option</button>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+            <label style="font-size:11px;font-weight:600;white-space:nowrap;color:var(--text-muted)">Défaut :</label>
+            <input type="text" name="default" value="" placeholder="Valeur sélectionnée par défaut" style="flex:1">
+          </div>
+          <input type="hidden" name="options" value="">
+        </div>
+      `;
+      document.getElementById('fields-list').appendChild(div);
+      updateBadge('survey');
+    }
+
+    // ── File picker dynamique ──
+    function onRepoChange(repoId) {
+      const sel = document.getElementById('file-select');
+      sel.disabled = true;
+      sel.innerHTML = '<option>Chargement…</option>';
+      fetch('/api/repository/' + repoId + '/files')
+        .then(r => r.json())
+        .then(data => {
+          sel.disabled = false;
+          if (!data.files || data.files.length === 0) {
+            sel.innerHTML = '<option value="">— Aucun fichier (repo non synchronisé) —</option>';
+            return;
+          }
+          sel.innerHTML = data.files.map(f => `<option value="${f}">${f}</option>`).join('');
+        })
+        .catch(() => {
+          sel.disabled = false;
+          sel.innerHTML = '<option value="">— Erreur de chargement —</option>';
+        });
+    }
+  </script>
+</body>
+</html>

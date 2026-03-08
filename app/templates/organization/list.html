@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gomme — Organisations</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <div class="app-layout">
+
+    <nav class="navbar">
+      <span class="nav-brand">Gomme</span>
+      <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/inventory/list">Inventaire</a>
+        <a href="/repository">Repositories</a>
+        <a href="/playbooks">Playbooks</a>
+        <a href="/tasks">Tâches</a>
+        <a href="/organizations" class="active">Organisations</a>
+        <a href="/credentials">Identifiants</a>
+        {{if .User.IsAdmin}}<a href="/admin/users">Admin</a>{{end}}
+      </div>
+      <div class="nav-user">
+        <a href="/change-password" style="color:var(--text-muted);font-size:13px;text-decoration:none">{{.User.Username}}</a>
+        <a href="/logout">Déconnexion</a>
+      </div>
+    </nav>
+
+    <div class="content-layout" style="overflow-y:auto;">
+      <div class="page-content">
+
+        <div class="page-header">
+          <h1 class="page-title">Organisations</h1>
+          <button class="btn btn-primary" onclick="openModal('modal-create')">+ Nouvelle organisation</button>
+        </div>
+
+        {{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
+        {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Propriétaire</th>
+                <th>Membres</th>
+                <th>Rôle</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Organizations}}
+              <tr>
+                <td>{{.Name}}</td>
+                <td style="color:var(--text-muted)">{{.Owner.Username}}</td>
+                <td style="color:var(--text-muted)">{{.MemberCount}}</td>
+                <td>
+                  {{if .IsOwner}}
+                  <span class="badge badge-running">Propriétaire</span>
+                  {{else}}
+                  <span class="badge badge-pending">Membre</span>
+                  {{end}}
+                </td>
+                <td>
+                  {{if .IsOwner}}
+                  <a href="/organizations/{{.ID}}" class="btn btn-sm">Gérer</a>
+                  {{else}}
+                  <a href="/organizations/{{.ID}}" class="btn btn-sm">Voir</a>
+                  {{end}}
+                </td>
+              </tr>
+              {{else}}
+              <tr><td colspan="5" style="color:var(--text-muted);text-align:center">Aucune organisation</td></tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Création -->
+  <div class="modal-overlay" id="modal-create">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Nouvelle organisation</h2>
+        <button class="modal-close" onclick="closeModal('modal-create')">✕</button>
+      </div>
+      <form method="POST" action="/organizations">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Nom</label>
+            <input type="text" name="name" required autocomplete="off">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" onclick="closeModal('modal-create')">Annuler</button>
+          <button type="submit" class="btn btn-primary">Créer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+      el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+    });
+  </script>
+</body>
+</html>

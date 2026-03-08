@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gomme — {{.Playbook.Name}}</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <div class="app-layout">
+
+    <nav class="navbar">
+      <span class="nav-brand">Gomme</span>
+      <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/inventory/list">Inventaire</a>
+        <a href="/repository">Repositories</a>
+        <a href="/playbooks" class="active">Playbooks</a>
+        <a href="/tasks">Tâches</a>
+        <a href="/organizations">Organisations</a>
+        <a href="/credentials">Identifiants</a>
+        {{if .User.IsAdmin}}<a href="/admin/users">Admin</a>{{end}}
+      </div>
+      <div class="nav-user">
+        <a href="/change-password" style="color:var(--text-muted);font-size:13px;text-decoration:none">{{.User.Username}}</a>
+        <a href="/logout">Déconnexion</a>
+      </div>
+    </nav>
+
+    <div class="content-layout" style="overflow-y:auto;">
+      <div class="page-content" style="max-width:720px">
+
+        <div class="page-header">
+          <h1 class="page-title">{{.Playbook.Name}}</h1>
+          <div style="display:flex;gap:8px">
+            <a href="/playbooks/{{.Playbook.ID}}/edit" class="btn">Modifier</a>
+            <a href="/playbooks" class="btn">← Retour</a>
+          </div>
+        </div>
+
+        {{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
+        {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+
+        <!-- Infos playbook -->
+        <div class="section" style="margin-bottom:16px">
+          <div class="section-body" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div>
+              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px">Repository</div>
+              <div style="font-size:13px">{{.Playbook.Repository.Name}}</div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px">Chemin</div>
+              <code style="font-size:12px;color:var(--text-muted)">{{.Playbook.Path}}</code>
+            </div>
+          </div>
+        </div>
+
+        <!-- Configuration (image Docker + inventaire) -->
+        <form method="POST" action="/playbooks/{{.Playbook.ID}}/config">
+          <div class="section" style="margin-bottom:16px">
+            <div class="section-header">Configuration</div>
+            <div class="modal-body">
+              <div class="form-group">
+                <label>Image Docker</label>
+                <select name="docker_image">
+                  <option value="">— Choisir une image —</option>
+                  {{range .DockerImages}}
+                  <option value="{{.Name}}" {{if eq .Name $.Playbook.DockerImage}}selected{{end}}>{{.Name}}</option>
+                  {{end}}
+                </select>
+                {{if not .DockerImages}}
+                <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Aucune image disponible — demandez à un administrateur d'en ajouter.</div>
+                {{end}}
+                {{if .Playbook.DockerImage}}
+                <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Actuelle : <code>{{.Playbook.DockerImage}}</code></div>
+                {{end}}
+              </div>
+              <div class="form-group">
+                <label>Inventaire par défaut</label>
+                <select name="inventory_id">
+                  <option value="0">localhost (connexion locale)</option>
+                  {{range .Inventories}}
+                  <option value="{{.ID}}" {{if eq .ID $.DefaultInventoryID}}selected{{end}}>{{.Name}}</option>
+                  {{end}}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+            <button type="submit" class="btn">Enregistrer la configuration</button>
+          </div>
+        </form>
+
+        <!-- Lancement -->
+        <form method="POST" action="/playbooks/{{.Playbook.ID}}/run">
+          <div class="section">
+            <div class="section-header">Lancer</div>
+            <div class="modal-body">
+              {{if not .Playbook.DockerImage}}
+              <div class="alert alert-error" style="margin:0">Image Docker non configurée — enregistrez d'abord la configuration ci-dessus.</div>
+              {{else}}
+              <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
+                Image : <code>{{.Playbook.DockerImage}}</code>
+                {{if .Playbook.DefaultInventory}} · Inventaire : <strong>{{.Playbook.DefaultInventory.Name}}</strong>{{else}} · Inventaire : localhost{{end}}
+              </div>
+              {{if .SurveyFields}}
+              <hr style="border:none;border-top:1px solid var(--border);margin:0 0 16px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:12px">Paramètres</div>
+              {{range .SurveyFields}}
+              <div class="form-group">
+                <label>{{.Label}}{{if .Required}} <span style="color:var(--red)">*</span>{{end}}</label>
+                {{if eq .Type "bool"}}
+                <label class="form-check">
+                  <input type="checkbox" name="survey_{{.VarName}}"> Activer
+                </label>
+                {{else if eq .Type "select"}}
+                <select name="survey_{{.VarName}}" {{if .Required}}required{{end}}>
+                  <option value="">— Choisir —</option>
+                </select>
+                {{else}}
+                <input type="text" name="survey_{{.VarName}}" {{if .Required}}required{{end}}>
+                {{end}}
+              </div>
+              {{end}}
+              {{end}}
+              {{end}}
+            </div>
+          </div>
+          {{if .Playbook.DockerImage}}
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+            <a href="/playbooks" class="btn">Annuler</a>
+            <button type="submit" class="btn btn-primary">▶ Lancer le playbook</button>
+          </div>
+          {{end}}
+        </form>
+
+      </div>
+    </div>
+  </div>
+</body>
+</html>

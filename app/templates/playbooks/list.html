@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gomme — Playbooks</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <div class="app-layout">
+
+    <nav class="navbar">
+      <span class="nav-brand">Gomme</span>
+      <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/inventory/list">Inventaire</a>
+        <a href="/repository">Repositories</a>
+        <a href="/playbooks" class="active">Playbooks</a>
+        <a href="/tasks">Tâches</a>
+        <a href="/organizations">Organisations</a>
+        <a href="/credentials">Identifiants</a>
+        {{if .User.IsAdmin}}<a href="/admin/users">Admin</a>{{end}}
+      </div>
+      <div class="nav-user">
+        <a href="/change-password" style="color:var(--text-muted);font-size:13px;text-decoration:none">{{.User.Username}}</a>
+        <a href="/logout">Déconnexion</a>
+      </div>
+    </nav>
+
+    <div class="content-layout" style="overflow-y:auto;">
+      <div class="page-content">
+
+        {{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
+        {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+
+        <div class="page-header">
+          <h1 class="page-title">Playbooks</h1>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="openModal('modal-new')">+ Nouveau playbook</button>
+            <a href="/repository" class="btn">Gérer les repositories</a>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Repository</th>
+                <th>Chemin</th>
+                <th>Organisation</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Playbooks}}
+              <tr>
+                <td>{{.Name}}</td>
+                <td style="color:var(--text-muted)">{{.Repository.Name}}</td>
+                <td><code style="font-size:12px;color:var(--text-muted)">{{.Path}}</code></td>
+                <td>
+                  {{if .Organization}}
+                  <span class="badge badge-host">{{.Organization.Name}}</span>
+                  {{else}}
+                  <span style="color:var(--text-muted);font-size:12px">— personnel —</span>
+                  {{end}}
+                </td>
+                <td>
+                  <div class="actions">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="openLaunch({{.ID}}, '{{.Name}}')">Lancer</button>
+                    {{if .CanEdit}}<a href="/playbooks/{{.ID}}/edit" class="btn btn-sm">Modifier</a>{{end}}
+                  </div>
+                </td>
+              </tr>
+              {{else}}
+              <tr>
+                <td colspan="5" style="text-align:center;color:var(--text-muted);padding:32px">
+                  Aucun playbook — créez-en un ou synchronisez un <a href="/repository">repository</a>
+                </td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale Nouveau playbook -->
+  <div class="modal-overlay" id="modal-new">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Nouveau playbook</h2>
+        <button class="modal-close" onclick="closeModal('modal-new')">✕</button>
+      </div>
+      <form method="POST" action="/playbooks">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Nom</label>
+            <input type="text" name="name" placeholder="Mon playbook" required>
+          </div>
+          <div class="form-group">
+            <label>Repository</label>
+            <select name="repository_id" id="new-repo-select" onchange="loadNewFiles(this.value)" required>
+              <option value="">— Sélectionner —</option>
+              {{range .Repositories}}
+              <option value="{{.ID}}">{{.Name}}</option>
+              {{end}}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Fichier playbook</label>
+            <select name="path" id="new-file-select">
+              <option value="">— Sélectionner d'abord un repository —</option>
+            </select>
+            <input type="text" name="path_manual" id="new-path-manual" placeholder="ou saisir le chemin manuellement"
+              style="margin-top:6px" oninput="syncPath(this.value)">
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+              Ex : playbook.yml ou sous-dossier/playbook.yml
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" onclick="closeModal('modal-new')">Annuler</button>
+          <button type="submit" class="btn btn-primary">Créer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal lancement -->
+  <div class="modal-overlay" id="modal-launch" onclick="if(event.target===this)closeLaunch()">
+    <div class="modal" style="max-width:560px">
+      <div class="modal-header">
+        <h2 class="modal-title" id="launch-title">Lancer</h2>
+        <button class="modal-close" onclick="closeLaunch()">✕</button>
+      </div>
+      <form id="launch-form" method="POST">
+        <div class="modal-body" id="launch-body">
+          <div style="color:var(--text-muted);text-align:center;padding:16px">Chargement…</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" onclick="closeLaunch()">Annuler</button>
+          <button type="submit" class="btn btn-primary">▶ Lancer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openModal(id)  { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+      el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+    });
+
+    function loadNewFiles(repoId) {
+      const sel = document.getElementById('new-file-select');
+      if (!repoId) {
+        sel.innerHTML = '<option value="">— Sélectionner d\'abord un repository —</option>';
+        return;
+      }
+      sel.disabled = true;
+      sel.innerHTML = '<option>Chargement…</option>';
+      fetch('/api/repository/' + repoId + '/files')
+        .then(r => r.json())
+        .then(data => {
+          sel.disabled = false;
+          if (!data.files || data.files.length === 0) {
+            sel.innerHTML = '<option value="">— Aucun fichier (repo non synchronisé) —</option>';
+            return;
+          }
+          sel.innerHTML = data.files.map(f => `<option value="${f}">${f}</option>`).join('');
+        })
+        .catch(() => {
+          sel.disabled = false;
+          sel.innerHTML = '<option value="">— Erreur de chargement —</option>';
+        });
+    }
+
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    // ── Modal lancement ──
+    async function openLaunch(id, name) {
+      try {
+        const res = await fetch('/api/playbooks/' + id + '/survey');
+        const fields = await res.json();
+        if (!fields || fields.length === 0) {
+          // Pas de survey : soumettre directement
+          const f = document.createElement('form');
+          f.method = 'POST';
+          f.action = '/playbooks/' + id + '/run';
+          document.body.appendChild(f);
+          f.submit();
+          return;
+        }
+        document.getElementById('launch-title').textContent = '▶ ' + name;
+        document.getElementById('launch-form').action = '/playbooks/' + id + '/run';
+        const body = document.getElementById('launch-body');
+        body.innerHTML = fields.map(f => {
+          const req = f.Required ? 'required' : '';
+          const star = f.Required ? '<span style="color:var(--accent)"> *</span>' : '';
+          let input;
+          if (f.Type === 'bool') {
+            input = `<label class="form-check"><input type="checkbox" name="survey_${f.VarName}"> Activer</label>`;
+          } else if (f.Type === 'select') {
+            const def = f.Default || '';
+            const opts = (f.Options || '').split('\n').map(l => l.trim()).filter(Boolean)
+              .map(l => { const p = l.split('|'); const v = p.length > 1 ? p[1].trim() : p[0].trim(); const sel = v === def ? ' selected' : ''; return `<option value="${v}"${sel}>${p[0].trim()}</option>`; }).join('');
+            input = `<select name="survey_${f.VarName}" ${req}><option value="">— Choisir —</option>${opts}</select>`;
+          } else if (f.Type === 'textarea') {
+            input = `<textarea name="survey_${f.VarName}" rows="3" style="resize:vertical" ${req}></textarea>`;
+          } else {
+            input = `<input type="text" name="survey_${f.VarName}" ${req}>`;
+          }
+          return `<div class="form-group"><label>${esc(f.Label)}${star}</label>${input}</div>`;
+        }).join('');
+        document.getElementById('modal-launch').classList.add('open');
+      } catch(e) {
+        const body = document.getElementById('launch-body');
+        if (body) body.innerHTML = '<p style="color:var(--accent);margin:0">Erreur de chargement</p>';
+        document.getElementById('modal-launch').classList.add('open');
+      }
+    }
+
+    function closeLaunch() { document.getElementById('modal-launch').classList.remove('open'); }
+
+    // Synchronise le select et l'input texte : le champ soumis est "path" (select)
+    // Si l'utilisateur tape dans l'input manuel, on l'utilise comme valeur du select
+    function syncPath(val) {
+      const sel = document.getElementById('new-file-select');
+      // Ajouter ou mettre à jour l'option manuelle
+      let opt = sel.querySelector('option[data-manual]');
+      if (!opt) {
+        opt = document.createElement('option');
+        opt.dataset.manual = '1';
+        sel.appendChild(opt);
+      }
+      opt.value = val;
+      opt.textContent = val || '—';
+      opt.selected = true;
+    }
+  </script>
+</body>
+</html>

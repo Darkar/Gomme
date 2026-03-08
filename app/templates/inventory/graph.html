@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gomme — Inventaire</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <div class="app-layout">
+
+    <nav class="navbar">
+      <span class="nav-brand">Gomme</span>
+      <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/inventory/list" class="active">Inventaire</a>
+        <a href="/repository">Repositories</a>
+        <a href="/playbooks">Playbooks</a>
+        <a href="/tasks">Tâches</a>
+        <a href="/organizations">Organisations</a>
+        <a href="/credentials">Identifiants</a>
+        {{if .User.IsAdmin}}<a href="/admin/users">Admin</a>{{end}}
+      </div>
+      <div class="nav-user">
+        <a href="/change-password" style="color:var(--text-muted);font-size:13px;text-decoration:none">{{.User.Username}}</a>
+        <a href="/logout">Déconnexion</a>
+      </div>
+    </nav>
+
+    <div class="content-layout">
+
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <h3>Statistiques</h3>
+          <div class="stat-grid">
+            <div class="stat-card">
+              <div class="stat-value" id="stat-hosts">—</div>
+              <div class="stat-label">Hôtes</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stat-groups">—</div>
+              <div class="stat-label">Groupes</div>
+            </div>
+            <div class="stat-card" style="grid-column:1/-1">
+              <div class="stat-value" id="stat-links">—</div>
+              <div class="stat-label">Liaisons</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <h3>Légende</h3>
+          <div class="legend-item">
+            <span class="legend-dot legend-host"></span>
+            <span>Hôte</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-rect legend-group"></span>
+            <span>Groupe</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="graph-area">
+        <div class="graph-toolbar">
+          <button class="btn" id="btn-fit">Ajuster la vue</button>
+          <button class="btn" id="btn-reset">Réinitialiser</button>
+          <span class="graph-toolbar-info" id="toolbar-info"></span>
+        </div>
+
+        <div id="graph-container">
+          <div class="graph-overlay" id="overlay-loading">
+            <div class="spinner"></div>
+            <span>Chargement de l'inventaire…</span>
+          </div>
+          <div class="graph-overlay hidden" id="overlay-error">
+            <span id="error-message"></span>
+          </div>
+          <div class="graph-overlay hidden" id="overlay-empty">
+            <span>Aucun hôte ou groupe trouvé.</span>
+          </div>
+        </div>
+      </main>
+
+      <aside class="details-panel" id="details-panel">
+        <div class="details-header">
+          <h3 id="details-title"></h3>
+          <button class="details-close" id="details-close">✕</button>
+        </div>
+        <div class="details-body" id="details-body"></div>
+      </aside>
+
+    </div>
+  </div>
+
+  <script src="/static/js/graph.js"></script>
+  <script>
+    const graph = new ForceGraph(document.getElementById('graph-container'));
+    let graphData = null;
+
+    const overlayLoading = document.getElementById('overlay-loading');
+    const overlayError   = document.getElementById('overlay-error');
+    const overlayEmpty   = document.getElementById('overlay-empty');
+    const errorMessage   = document.getElementById('error-message');
+    const detailsPanel   = document.getElementById('details-panel');
+    const detailsTitle   = document.getElementById('details-title');
+    const detailsBody    = document.getElementById('details-body');
+    const toolbarInfo    = document.getElementById('toolbar-info');
+
+    function showOverlay(id) {
+      [overlayLoading, overlayError, overlayEmpty].forEach(el => el.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    function hideOverlays() {
+      [overlayLoading, overlayError, overlayEmpty].forEach(el => el.classList.add('hidden'));
+    }
+
+    function esc(str) {
+      return String(str).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+
+    function updateStats(data) {
+      const hosts  = data.nodes.filter(n => n.type === 'host').length;
+      const groups = data.nodes.filter(n => n.type === 'group').length;
+      document.getElementById('stat-hosts').textContent  = hosts;
+      document.getElementById('stat-groups').textContent = groups;
+      document.getElementById('stat-links').textContent  = data.links.length;
+      toolbarInfo.textContent = `${hosts} hôte${hosts !== 1 ? 's' : ''}, ${groups} groupe${groups !== 1 ? 's' : ''}`;
+    }
+
+    graph.onSelect = (node, connected) => {
+      detailsPanel.classList.add('open');
+      detailsTitle.textContent = node.label;
+
+      const typeLabel = node.type === 'host' ? 'Hôte' : 'Groupe';
+      const badgeClass = node.type === 'host' ? 'badge-host' : 'badge-group';
+
+      let html = `
+        <div class="detail-row">
+          <div class="detail-label">Type</div>
+          <div class="detail-value"><span class="badge ${badgeClass}">${typeLabel}</span></div>
+        </div>`;
+
+      if (node.type === 'host' && node.ip) {
+        html += `
+        <div class="detail-row">
+          <div class="detail-label">Adresse IP</div>
+          <div class="detail-value">${esc(node.ip)}</div>
+        </div>`;
+      }
+
+      if (node.description) {
+        html += `
+        <div class="detail-row">
+          <div class="detail-label">Description</div>
+          <div class="detail-value">${esc(node.description)}</div>
+        </div>`;
+      }
+
+      const connLabel = node.type === 'host' ? 'Groupes' : 'Hôtes';
+      html += `<div class="detail-row"><div class="detail-label">${connLabel}</div>`;
+
+      if (connected.length) {
+        html += '<div class="connected-list">';
+        connected.forEach(c => {
+          html += `<div class="connected-item">${esc(c.label)}</div>`;
+        });
+        html += '</div>';
+      } else {
+        html += '<div class="detail-value">—</div>';
+      }
+      html += '</div>';
+
+      detailsBody.innerHTML = html;
+    };
+
+    document.getElementById('details-close').addEventListener('click', () => {
+      detailsPanel.classList.remove('open');
+    });
+
+    document.getElementById('btn-fit').addEventListener('click', () => graph.fit());
+    document.getElementById('btn-reset').addEventListener('click', () => graph.resetView());
+
+    async function loadInventory() {
+      showOverlay('overlay-loading');
+      try {
+        const resp = await fetch('/api/inventory/graph');
+        if (!resp.ok) throw new Error(`Erreur serveur (${resp.status})`);
+        graphData = await resp.json();
+
+        if (!graphData.nodes || graphData.nodes.length === 0) {
+          showOverlay('overlay-empty');
+          return;
+        }
+
+        hideOverlays();
+        graph.load(graphData);
+        updateStats(graphData);
+        requestAnimationFrame(() => graph.fit());
+      } catch (err) {
+        errorMessage.textContent = err.message;
+        showOverlay('overlay-error');
+      }
+    }
+
+    loadInventory();
+  </script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+services:
+  gomme-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gomme-app
+    container_name: gomme-app
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gomme-db
+      - socket-proxy
+    environment:
+      SECRET_KEY: "${SECRET_KEY}"
+      SERVER_PORT: "${SERVER_PORT}"
+      DB_HOST: "${GOMME_DB_HOST}"
+      DB_USER: "${GOMME_DB_USER}"
+      DB_PASSWORD: "${GOMME_DB_PASSWORD}"
+      DB_NAME: "${GOMME_DB_NAME}"
+      DOCKER_HOST: "tcp://socket-proxy:2375"
+    volumes:
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
+      - gomme_repo:/app/repo
+
+  gomme-db:
+    image: "${mysql_image}"
+    container_name: gomme-db
+    restart: always
+    environment:
+      MYSQL_USER: "${GOMME_DB_USER}"
+      MYSQL_PASSWORD: "${GOMME_DB_PASSWORD}"
+      MYSQL_ROOT_PASSWORD: "${GOMME_DB_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${GOMME_DB_NAME}"
+    volumes:
+      - ./app/sql:/docker-entrypoint-initdb.d
+      - gomme_db:/var/lib/mysql
+
+  socket-proxy:
+    image: tecnativa/docker-socket-proxy
+    container_name: gomme-socket-proxy
+    restart: always
+    environment:
+      CONTAINERS: 1
+      IMAGES: 1
+      NETWORKS: 1
+      INFO: 1
+      POST: 1
+      DELETE: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - default
+
+volumes:
+  gomme_repo:
+    name: gomme_repo
+  gomme_db:
+    name: gomme_db   

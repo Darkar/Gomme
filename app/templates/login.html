@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gomme - Connexion</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <div class="login-logo">
+        <div style="width:52px;height:52px;background:#ee0000;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:#fff;margin-bottom:14px">G</div>
+        <h1>Gomme</h1>
+        <p>Gestionnaire de playbooks Ansible</p>
+      </div>
+
+      {{if .Error}}
+      <div class="form-error">{{.Error}}</div>
+      {{end}}
+
+      <form method="POST" action="/login">
+        <div class="form-group">
+          <label for="username">Identifiant</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            autocomplete="username"
+            autofocus
+            required
+          >
+        </div>
+        <div class="form-group">
+          <label for="password">Mot de passe</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            autocomplete="current-password"
+            required
+          >
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Se connecter</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

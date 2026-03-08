@@ -1,0 +1,15 @@
+ansible
+ansible-core
+ansible-runner
+ansible-lint
+jinja2
+pyyaml
+jmespath
+netaddr
+dnspython
+cryptography
+paramiko
+hvac
+requests
+pywinrm
+proxmoxer

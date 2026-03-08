@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gomme — Repositories</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <div class="app-layout">
+
+    <nav class="navbar">
+      <span class="nav-brand">Gomme</span>
+      <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/inventory/list">Inventaire</a>
+        <a href="/repository" class="active">Repositories</a>
+        <a href="/playbooks">Playbooks</a>
+        <a href="/tasks">Tâches</a>
+        <a href="/organizations">Organisations</a>
+        <a href="/credentials">Identifiants</a>
+        {{if .User.IsAdmin}}<a href="/admin/users">Admin</a>{{end}}
+      </div>
+      <div class="nav-user">
+        <a href="/change-password" style="color:var(--text-muted);font-size:13px;text-decoration:none">{{.User.Username}}</a>
+        <a href="/logout">Déconnexion</a>
+      </div>
+    </nav>
+
+    <div class="content-layout" style="overflow-y:auto;">
+      <div class="page-content">
+
+        <div class="page-header">
+          <h1 class="page-title">Repositories</h1>
+          <button class="btn btn-primary" onclick="openModal('modal-create')">+ Nouveau repository</button>
+        </div>
+
+        {{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
+        {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>URL</th>
+                <th>Branche</th>
+                <th>Auth</th>
+                <th>Auto-sync</th>
+                <th>Dernière synchro</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Repositories}}
+              <tr>
+                <td>{{.Name}}</td>
+                <td style="color:var(--text-muted);font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{.URL}}</td>
+                <td><code style="font-size:12px;color:var(--purple)">{{.Branch}}</code></td>
+                <td>
+                  {{if eq .AuthType "password"}}<span class="badge badge-host">Mot de passe</span>
+                  {{else if eq .AuthType "ssh_key"}}<span class="badge badge-host">Clé SSH</span>
+                  {{else}}<span class="badge badge-pending">Aucune</span>{{end}}
+                </td>
+                <td>{{if .AutoSync}}<span class="badge badge-success">Activé</span>{{else}}<span class="badge badge-pending">Désactivé</span>{{end}}</td>
+                <td style="color:var(--text-muted)">
+                  {{if .LastSyncAt}}{{.LastSyncAt.Format "02/01/2006 15:04"}}{{else}}Jamais{{end}}
+                </td>
+                <td>
+                  <div class="actions">
+                    <form method="POST" action="/repository/{{.ID}}/sync" style="display:inline">
+                      <button class="btn btn-sm">Sync</button>
+                    </form>
+                    {{if .CanEdit}}
+                    <button class="btn btn-sm"
+                      data-id="{{.ID}}"
+                      data-name="{{.Name}}"
+                      data-url="{{.URL}}"
+                      data-branch="{{.Branch}}"
+                      data-autosync="{{.AutoSync}}"
+                      data-insecure-tls="{{.InsecureTLS}}"
+                      data-auth-type="{{.AuthType}}"
+                      data-username="{{.Username}}"
+                      onclick="openEditModal(this)">Éditer</button>
+                    {{end}}
+                    {{if .CanDelete}}
+                    <form method="POST" action="/repository/{{.ID}}/delete" onsubmit="return confirm('Supprimer ce repository ?')" style="display:inline">
+                      <button class="btn btn-sm btn-danger">Supprimer</button>
+                    </form>
+                    {{end}}
+                  </div>
+                </td>
+              </tr>
+              {{else}}
+              <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px">Aucun repository</td></tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== Modal Création ====== -->
+  <div class="modal-overlay" id="modal-create">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Nouveau repository</h2>
+        <button class="modal-close" onclick="closeModal('modal-create')">✕</button>
+      </div>
+      <form method="POST" action="/repository">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Nom</label>
+            <input type="text" name="name" required>
+          </div>
+          <div class="form-group">
+            <label>URL Git</label>
+            <input type="text" name="url" placeholder="https://github.com/org/playbooks.git" required>
+          </div>
+          <div class="form-group">
+            <label>Branche</label>
+            <input type="text" name="branch" value="main">
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" name="auto_sync"> Synchronisation automatique
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" name="insecure_tls"> Ignorer les erreurs TLS (certificat auto-signé)
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label>Authentification</label>
+            <select name="auth_type" id="create-auth-type" onchange="setAuthType('create', this.value)">
+              <option value="none">Aucune (dépôt public)</option>
+              <option value="password">Mot de passe / Token</option>
+              <option value="ssh_key">Clé SSH privée</option>
+            </select>
+          </div>
+
+          <!-- Mot de passe / Token -->
+          <div id="create-auth-password" class="auth-section" style="display:none">
+            <div class="form-group">
+              <label>Nom d'utilisateur</label>
+              <input type="text" name="username" autocomplete="username" placeholder="git, votre login, ou laissez vide pour token">
+            </div>
+            <div class="form-group">
+              <label>Mot de passe ou Token</label>
+              <input type="password" name="password" autocomplete="new-password">
+            </div>
+          </div>
+
+          <!-- Clé SSH -->
+          <div id="create-auth-ssh_key" class="auth-section" style="display:none">
+            <div class="form-group">
+              <label>Clé privée SSH</label>
+              <textarea name="ssh_key" rows="6" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----
+...
+-----END OPENSSH PRIVATE KEY-----" style="font-family:monospace;font-size:12px"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" onclick="closeModal('modal-create')">Annuler</button>
+          <button type="submit" class="btn btn-primary">Créer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====== Modal Édition ====== -->
+  <div class="modal-overlay" id="modal-edit">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Modifier le repository</h2>
+        <button class="modal-close" onclick="closeModal('modal-edit')">✕</button>
+      </div>
+      <form method="POST" id="form-edit">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Nom</label>
+            <input type="text" name="name" id="edit-name" required>
+          </div>
+          <div class="form-group">
+            <label>URL Git</label>
+            <input type="text" name="url" id="edit-url" required>
+          </div>
+          <div class="form-group">
+            <label>Branche</label>
+            <input type="text" name="branch" id="edit-branch">
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" name="auto_sync" id="edit-autosync"> Synchronisation automatique
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" name="insecure_tls" id="edit-insecure-tls"> Ignorer les erreurs TLS (certificat auto-signé)
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label>Authentification</label>
+            <select name="auth_type" id="edit-auth-type" onchange="setAuthType('edit', this.value)">
+              <option value="none">Aucune (dépôt public)</option>
+              <option value="password">Mot de passe / Token</option>
+              <option value="ssh_key">Clé SSH privée</option>
+            </select>
+          </div>
+
+          <!-- Mot de passe / Token -->
+          <div id="edit-auth-password" class="auth-section" style="display:none">
+            <div class="form-group">
+              <label>Nom d'utilisateur</label>
+              <input type="text" name="username" id="edit-username" autocomplete="username" placeholder="git, votre login, ou laissez vide pour token">
+            </div>
+            <div class="form-group">
+              <label>Mot de passe ou Token</label>
+              <input type="password" name="password" autocomplete="new-password"
+                placeholder="Laisser vide pour conserver le mot de passe actuel">
+            </div>
+          </div>
+
+          <!-- Clé SSH -->
+          <div id="edit-auth-ssh_key" class="auth-section" style="display:none">
+            <div class="form-group">
+              <label>Clé privée SSH</label>
+              <textarea name="ssh_key" rows="6"
+                placeholder="Laisser vide pour conserver la clé actuelle"
+                style="font-family:monospace;font-size:12px"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" onclick="closeModal('modal-edit')">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+    function setAuthType(prefix, value) {
+      document.querySelectorAll('#modal-' + prefix + ' .auth-section').forEach(el => {
+        el.style.display = 'none';
+      });
+      const section = document.getElementById(prefix + '-auth-' + value);
+      if (section) section.style.display = '';
+    }
+
+    function openEditModal(btn) {
+      const d = btn.dataset;
+      document.getElementById('form-edit').action = '/repository/' + d.id + '/edit';
+      document.getElementById('edit-name').value     = d.name;
+      document.getElementById('edit-url').value      = d.url;
+      document.getElementById('edit-branch').value   = d.branch;
+      document.getElementById('edit-autosync').checked = d.autosync === 'true';
+      document.getElementById('edit-insecure-tls').checked = d.insecureTls === 'true';
+      document.getElementById('edit-auth-type').value = d.authType || 'none';
+      document.getElementById('edit-username').value  = d.username || '';
+      setAuthType('edit', d.authType || 'none');
+      // Jamais pré-remplir mot de passe ou clé SSH
+      openModal('modal-edit');
+    }
+
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+      el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+    });
+  </script>
+</body>
+</html>

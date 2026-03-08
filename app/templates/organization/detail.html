@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gomme — {{.Org.Name}}</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <style>
+    .perm-select {
+      font-size: 13px;
+      padding: 4px 6px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg-1);
+      color: var(--text);
+      width: 100%;
+      cursor: pointer;
+    }
+    .perm-select:disabled { opacity: 0.5; cursor: default; }
+    .perm-badge { font-size: 12px; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+
+    <nav class="navbar">
+      <span class="nav-brand">Gomme</span>
+      <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/inventory/list">Inventaire</a>
+        <a href="/repository">Repositories</a>
+        <a href="/playbooks">Playbooks</a>
+        <a href="/tasks">Tâches</a>
+        <a href="/organizations" class="active">Organisations</a>
+        <a href="/credentials">Identifiants</a>
+        {{if .User.IsAdmin}}<a href="/admin/users">Admin</a>{{end}}
+      </div>
+      <div class="nav-user">
+        <a href="/change-password" style="color:var(--text-muted);font-size:13px;text-decoration:none">{{.User.Username}}</a>
+        <a href="/logout">Déconnexion</a>
+      </div>
+    </nav>
+
+    <div class="content-layout" style="overflow-y:auto;">
+      <div class="page-content">
+
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">{{.Org.Name}}</h1>
+            <div style="color:var(--text-muted);font-size:13px">Propriétaire : {{.Org.Owner.Username}}</div>
+          </div>
+          {{if .IsOwner}}
+          <div style="display:flex;gap:8px">
+            <button class="btn" onclick="openModal('modal-edit')">Renommer</button>
+            <button class="btn" onclick="openModal('modal-transfer')">Transférer</button>
+            <form method="POST" action="/organizations/{{.Org.ID}}/delete" onsubmit="return confirm('Supprimer cette organisation ?')" style="display:inline">
+              <button class="btn btn-danger">Supprimer</button>
+            </form>
+          </div>
+          {{end}}
+        </div>
+
+        {{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
+        {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+
+        <!-- Formulaires de mise à jour des permissions (hors tableau pour HTML valide) -->
+        {{range .Members}}
+        {{if ne .UserID $.Org.OwnerID}}
+        <form id="form-member-{{.UserID}}" method="POST" action="/organizations/{{$.Org.ID}}/members/{{.UserID}}/update"></form>
+        {{end}}
+        {{end}}
+
+        <!-- Tableau des membres -->
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Utilisateur</th>
+                <th>Playbooks</th>
+                <th>Inventaires</th>
+                <th>Identifiants</th>
+                <th>Repositories</th>
+                {{if .IsOwner}}<th></th>{{end}}
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Members}}
+              <tr>
+                <td>
+                  {{.User.Username}}
+                  {{if eq .UserID $.Org.OwnerID}}<span class="badge badge-running" style="margin-left:4px">Propriétaire</span>{{end}}
+                </td>
+                {{if eq .UserID $.Org.OwnerID}}
+                  <td><span class="perm-badge">Gérer</span></td>
+                  <td><span class="perm-badge">Gérer</span></td>
+                  <td><span class="perm-badge">Gérer</span></td>
+                  <td><span class="perm-badge">Gérer</span></td>
+                  {{if $.IsOwner}}<td></td>{{end}}
+                {{else}}
+                  {{$uid := .UserID}}
+                  {{$owner := $.IsOwner}}
+                  <td>
+                    <select name="perm_playbook" class="perm-select" form="form-member-{{$uid}}"
+                      {{if $owner}}onchange="this.form.submit()"{{else}}disabled{{end}}>
+                      <option value="none"   {{if eq .PermPlaybook "none"}}selected{{end}}>Aucun</option>
+                      <option value="create" {{if eq .PermPlaybook "create"}}selected{{end}}>Créer</option>
+                      <option value="edit"   {{if eq .PermPlaybook "edit"}}selected{{end}}>Modifier</option>
+                      <option value="manage" {{if eq .PermPlaybook "manage"}}selected{{end}}>Gérer</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select name="perm_inventory" class="perm-select" form="form-member-{{$uid}}"
+                      {{if $owner}}onchange="this.form.submit()"{{else}}disabled{{end}}>
+                      <option value="none"   {{if eq .PermInventory "none"}}selected{{end}}>Aucun</option>
+                      <option value="create" {{if eq .PermInventory "create"}}selected{{end}}>Créer</option>
+                      <option value="edit"   {{if eq .PermInventory "edit"}}selected{{end}}>Modifier</option>
+                      <option value="manage" {{if eq .PermInventory "manage"}}selected{{end}}>Gérer</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select name="perm_credential" class="perm-select" form="form-member-{{$uid}}"
+                      {{if $owner}}onchange="this.form.submit()"{{else}}disabled{{end}}>
+                      <option value="none"   {{if eq .PermCredential "none"}}selected{{end}}>Aucun</option>
+                      <option value="create" {{if eq .PermCredential "create"}}selected{{end}}>Créer</option>
+                      <option value="edit"   {{if eq .PermCredential "edit"}}selected{{end}}>Modifier</option>
+                      <option value="manage" {{if eq .PermCredential "manage"}}selected{{end}}>Gérer</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select name="perm_repository" class="perm-select" form="form-member-{{$uid}}"
+                      {{if $owner}}onchange="this.form.submit()"{{else}}disabled{{end}}>
+                      <option value="none"   {{if eq .PermRepository "none"}}selected{{end}}>Aucun</option>
+                      <option value="create" {{if eq .PermRepository "create"}}selected{{end}}>Créer</option>
+                      <option value="edit"   {{if eq .PermRepository "edit"}}selected{{end}}>Modifier</option>
+                      <option value="manage" {{if eq .PermRepository "manage"}}selected{{end}}>Gérer</option>
+                    </select>
+                  </td>
+                  {{if $.IsOwner}}
+                  <td>
+                    <form method="POST" action="/organizations/{{$.Org.ID}}/members/{{.UserID}}/delete" onsubmit="return confirm('Retirer ce membre ?')" style="display:inline">
+                      <button class="btn btn-sm btn-danger">Retirer</button>
+                    </form>
+                  </td>
+                  {{end}}
+                {{end}}
+              </tr>
+              {{else}}
+              <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:32px">Aucun membre</td></tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Ajouter un membre (owner/admin uniquement) -->
+        {{if .IsOwner}}
+        {{if .Users}}
+        <div style="margin-top:24px">
+          <h2 style="font-size:16px;margin-bottom:12px">Ajouter un membre</h2>
+          <form method="POST" action="/organizations/{{.Org.ID}}/members">
+            <div style="display:flex;flex-direction:column;gap:12px;max-width:680px">
+              <div class="form-group" style="margin:0">
+                <label>Utilisateur</label>
+                <select name="user_id" required>
+                  <option value="">— choisir —</option>
+                  {{range .Users}}
+                  <option value="{{.ID}}">{{.Username}}</option>
+                  {{end}}
+                </select>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+                <div class="form-group" style="margin:0">
+                  <label>Playbooks</label>
+                  <select name="perm_playbook">
+                    <option value="none">Aucun</option>
+                    <option value="create">Créer</option>
+                    <option value="edit">Modifier</option>
+                    <option value="manage">Gérer</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label>Inventaires</label>
+                  <select name="perm_inventory">
+                    <option value="none">Aucun</option>
+                    <option value="create">Créer</option>
+                    <option value="edit">Modifier</option>
+                    <option value="manage">Gérer</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label>Identifiants</label>
+                  <select name="perm_credential">
+                    <option value="none">Aucun</option>
+                    <option value="create">Créer</option>
+                    <option value="edit">Modifier</option>
+                    <option value="manage">Gérer</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label>Repositories</label>
+                  <select name="perm_repository">
+                    <option value="none">Aucun</option>
+                    <option value="create">Créer</option>
+                    <option value="edit">Modifier</option>
+                    <option value="manage">Gérer</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <button type="submit" class="btn btn-primary">Ajouter</button>
+              </div>
+            </div>
+          </form>
+        </div>
+        {{end}}
+        {{end}}
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Renommer -->
+  <div class="modal-overlay" id="modal-edit">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Renommer l'organisation</h2>
+        <button class="modal-close" onclick="closeModal('modal-edit')">✕</button>
+      </div>
+      <form method="POST" action="/organizations/{{.Org.ID}}/edit">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Nouveau nom</label>
+            <input type="text" name="name" value="{{.Org.Name}}" required autocomplete="off">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" onclick="closeModal('modal-edit')">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Transférer -->
+  <div class="modal-overlay" id="modal-transfer">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Transférer la propriété</h2>
+        <button class="modal-close" onclick="closeModal('modal-transfer')">✕</button>
+      </div>
+      <form method="POST" action="/organizations/{{.Org.ID}}/transfer" onsubmit="return confirm('Transférer la propriété ? Vous perdrez vos droits de propriétaire.')">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Nouveau propriétaire (doit être membre)</label>
+            <select name="new_owner_id" required>
+              <option value="">— choisir —</option>
+              {{range .Members}}
+              {{if ne .UserID $.Org.OwnerID}}
+              <option value="{{.UserID}}">{{.User.Username}}</option>
+              {{end}}
+              {{end}}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" onclick="closeModal('modal-transfer')">Annuler</button>
+          <button type="submit" class="btn btn-danger">Transférer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+      el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+    });
+  </script>
+</body>
+</html>

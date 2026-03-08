@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gomme — Exécution #{{.Run.ID}}</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <style>
+    .detail-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .5px; color: var(--text-muted); margin-bottom: 4px;
+    }
+    .detail-value { font-size: 13px; }
+    .kv-row {
+      display: grid; grid-template-columns: 180px 1fr; gap: 8px;
+      align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .kv-row:last-child { border-bottom: none; }
+    .kv-key { color: var(--text-muted); font-family: monospace; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+
+    <nav class="navbar">
+      <span class="nav-brand">Gomme</span>
+      <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/inventory/list">Inventaire</a>
+        <a href="/repository">Repositories</a>
+        <a href="/playbooks" class="active">Playbooks</a>
+        <a href="/tasks">Tâches</a>
+        <a href="/organizations">Organisations</a>
+        <a href="/credentials">Identifiants</a>
+        {{if .User.IsAdmin}}<a href="/admin/users">Admin</a>{{end}}
+      </div>
+      <div class="nav-user">
+        <a href="/change-password" style="color:var(--text-muted);font-size:13px;text-decoration:none">{{.User.Username}}</a>
+        <a href="/logout">Déconnexion</a>
+      </div>
+    </nav>
+
+    <div class="content-layout" style="overflow-y:auto;">
+      <div class="page-content">
+
+        <div class="page-header">
+          <h1 class="page-title">Exécution #{{.Run.ID}} — {{.Run.Playbook.Name}}</h1>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span class="badge badge-{{.Run.Status}}" id="status-badge">{{.Run.Status}}</span>
+            {{if and (ne .Run.Status "running") (ne .Run.Status "pending")}}
+              {{if .Run.Playbook.SurveyFields}}
+              <button type="button" class="btn btn-primary" onclick="openRelaunch()">▶ Relancer</button>
+              {{else}}
+              <form method="POST" action="/playbooks/{{.Run.PlaybookID}}/run" style="display:inline">
+                <button type="submit" class="btn btn-primary">▶ Relancer</button>
+              </form>
+              {{end}}
+            {{end}}
+            <a href="/playbooks" class="btn">← Retour</a>
+          </div>
+        </div>
+
+        <!-- Infos résumé -->
+        <div class="section" style="margin-bottom:16px">
+          <div class="section-body">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px{{if .Run.Limit}};margin-bottom:12px{{end}}">
+              <div>
+                <div class="detail-label">Inventaires</div>
+                <div class="detail-value">
+                  {{if .Run.Inventories}}
+                  <div style="display:flex;flex-wrap:wrap;gap:4px">
+                    {{range .Run.Inventories}}
+                    <span class="badge badge-host">{{.Inventory.Name}}{{if .GroupFilter}} · <code style="font-size:10px">{{.GroupFilter}}</code>{{end}}</span>
+                    {{end}}
+                  </div>
+                  {{else}}localhost{{end}}
+                </div>
+              </div>
+              <div>
+                <div class="detail-label">Image Docker</div>
+                <div class="detail-value" style="font-family:monospace;font-size:12px">{{if .Run.DockerImage}}{{.Run.DockerImage}}{{else}}—{{end}}</div>
+              </div>
+              <div>
+                <div class="detail-label">Démarré</div>
+                <div class="detail-value">{{if .Run.StartedAt}}{{.Run.StartedAt.Format "02/01/2006 15:04:05"}}{{else}}—{{end}}</div>
+              </div>
+              <div>
+                <div class="detail-label">Terminé</div>
+                <div class="detail-value">{{if .Run.FinishedAt}}{{.Run.FinishedAt.Format "02/01/2006 15:04:05"}}{{else}}—{{end}}</div>
+              </div>
+            </div>
+            {{if .Run.Limit}}
+            <div>
+              <div class="detail-label">Limit</div>
+              <div class="detail-value"><code>{{.Run.Limit}}</code></div>
+            </div>
+            {{end}}
+          </div>
+        </div>
+
+        <!-- Sortie -->
+        <div class="section" style="margin-bottom:16px">
+          <div class="section-header" style="display:flex;align-items:center;justify-content:space-between;">
+            <span>Sortie</span>
+            <span id="live-indicator" style="font-size:12px;color:var(--blue)"></span>
+          </div>
+          <div class="section-body" style="padding:0">
+            <div class="output-area" id="output" data-raw="{{.Run.Output}}"></div>
+          </div>
+        </div>
+
+        <!-- Détails -->
+        {{if or .Run.Playbook.Vars .Run.Playbook.Credentials .Run.Playbook.SurveyFields}}
+        <div class="section">
+          <div class="section-header">Détails du playbook</div>
+          <div class="section-body">
+
+            {{if .Run.Playbook.Vars}}
+            <div style="margin-bottom:20px">
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Variables</div>
+              <div>
+                {{range .Run.Playbook.Vars}}
+                <div class="kv-row">
+                  <span class="kv-key">{{.Key}}</span>
+                  <span>{{if .Encrypted}}<span style="color:var(--text-muted)">••••••••</span>{{else}}{{.Value}}{{end}}</span>
+                </div>
+                {{end}}
+              </div>
+            </div>
+            {{end}}
+
+            {{if .Run.Playbook.SurveyFields}}
+            <div style="margin-bottom:20px">
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Paramètres du formulaire</div>
+              <div>
+                {{range .Run.Playbook.SurveyFields}}
+                <div class="kv-row">
+                  <span class="kv-key">{{.VarName}}</span>
+                  <span style="color:var(--text-muted)">{{.Label}}
+                    {{if .Required}}<span style="color:var(--accent);font-size:11px"> · requis</span>{{end}}
+                    {{if .Default}} · <span style="font-style:italic">défaut : {{.Default}}</span>{{end}}
+                  </span>
+                </div>
+                {{end}}
+              </div>
+            </div>
+            {{end}}
+
+            {{if .Run.Playbook.Credentials}}
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Identifiants</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                {{range .Run.Playbook.Credentials}}
+                <span class="badge badge-host">{{.Name}}</span>
+                {{end}}
+              </div>
+            </div>
+            {{end}}
+
+          </div>
+        </div>
+        {{end}}
+
+      </div>
+    </div>
+  </div>
+
+  {{if .Run.Playbook.SurveyFields}}
+  <!-- Modal relancer (survey uniquement) -->
+  <div class="modal-overlay" id="modal-relaunch" onclick="if(event.target===this)closeRelaunch()">
+    <div class="modal" style="max-width:560px">
+      <div class="modal-header">
+        <h2 class="modal-title">▶ Relancer — {{.Run.Playbook.Name}}</h2>
+        <button class="modal-close" onclick="closeRelaunch()">✕</button>
+      </div>
+      <form method="POST" action="/playbooks/{{.Run.PlaybookID}}/run">
+        <div class="modal-body">
+          {{range .Run.Playbook.SurveyFields}}{{$f := .}}
+          <div class="form-group">
+            <label>{{.Label}}{{if .Required}} <span style="color:var(--accent)">*</span>{{end}}</label>
+            {{if eq .Type "bool"}}
+            <label class="form-check"><input type="checkbox" name="survey_{{.VarName}}"> Activer</label>
+            {{else if eq .Type "select"}}
+            <select name="survey_{{.VarName}}" {{if .Required}}required{{end}}>
+              <option value="">— Choisir —</option>
+              {{range splitOpts .Options}}
+              <option value="{{index . 1}}" {{if eq (index . 1) $f.Default}}selected{{end}}>{{index . 0}}</option>
+              {{end}}
+            </select>
+            {{else if eq .Type "textarea"}}
+            <textarea name="survey_{{.VarName}}" rows="3" style="resize:vertical" {{if .Required}}required{{end}}></textarea>
+            {{else}}
+            <input type="text" name="survey_{{.VarName}}" value="{{.Default}}" {{if .Required}}required{{end}}>
+            {{end}}
+          </div>
+          {{end}}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" onclick="closeRelaunch()">Annuler</button>
+          <button type="submit" class="btn btn-primary">▶ Lancer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {{end}}
+
+  <script src="/static/js/ansi_up.min.js"></script>
+  <script>
+    const runID = {{.Run.ID}};
+    const initialStatus = "{{.Run.Status}}";
+    const outputEl = document.getElementById('output');
+    const badge = document.getElementById('status-badge');
+    const indicator = document.getElementById('live-indicator');
+    const au = new AnsiUp();
+    au.use_classes = false;
+
+    function renderOutput(text) {
+      outputEl.innerHTML = au.ansi_to_html(text);
+    }
+
+    // Afficher l'output stocké (runs terminés)
+    const stored = outputEl.dataset.raw;
+    if (stored) renderOutput(stored);
+
+    if (initialStatus === 'running' || initialStatus === 'pending') {
+      indicator.textContent = '● Live';
+      let buffer = '';
+
+      const es = new EventSource('/api/runs/' + runID + '/stream');
+
+      es.addEventListener('output', e => {
+        // Run terminé avant connexion SSE : output complet reçu
+        renderOutput(JSON.parse(e.data));
+        outputEl.scrollTop = outputEl.scrollHeight;
+      });
+
+      es.addEventListener('chunk', e => {
+        buffer += JSON.parse(e.data);
+        renderOutput(buffer);
+        outputEl.scrollTop = outputEl.scrollHeight;
+      });
+
+      es.addEventListener('done', e => {
+        const status = JSON.parse(e.data);
+        badge.textContent = status;
+        badge.className = 'badge badge-' + status;
+        indicator.textContent = '';
+        es.close();
+        // Si le buffer est vide (run très rapide), recharger la page pour avoir l'output final
+        if (!buffer) location.reload();
+      });
+
+      es.onerror = () => {
+        es.close();
+        indicator.textContent = '';
+      };
+    }
+
+    function openRelaunch() { document.getElementById('modal-relaunch').classList.add('open'); }
+    function closeRelaunch() { document.getElementById('modal-relaunch').classList.remove('open'); }
+  </script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gomme — Survey — {{.Playbook.Name}}</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <div class="app-layout">
+
+    <nav class="navbar">
+      <span class="nav-brand">Gomme</span>
+      <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/inventory/list">Inventaire</a>
+        <a href="/repository">Repositories</a>
+        <a href="/playbooks" class="active">Playbooks</a>
+        <a href="/tasks">Tâches</a>
+        <a href="/organizations">Organisations</a>
+        <a href="/credentials">Identifiants</a>
+        {{if .User.IsAdmin}}<a href="/admin/users">Admin</a>{{end}}
+      </div>
+      <div class="nav-user">
+        <a href="/change-password" style="color:var(--text-muted);font-size:13px;text-decoration:none">{{.User.Username}}</a>
+        <a href="/logout">Déconnexion</a>
+      </div>
+    </nav>
+
+    <div class="content-layout" style="overflow-y:auto;">
+      <div class="page-content" style="max-width:900px">
+
+        <div class="page-header">
+          <h1 class="page-title">Survey — {{.Playbook.Name}}</h1>
+          <div style="display:flex;gap:8px;">
+            <a href="/playbooks/{{.Playbook.ID}}/vars" class="btn">Variables</a>
+            <a href="/playbooks/{{.Playbook.ID}}" class="btn">Lancer</a>
+            <a href="/playbooks" class="btn">← Retour</a>
+          </div>
+        </div>
+
+        {{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
+
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+          Définissez les paramètres que l'utilisateur doit renseigner avant de lancer ce playbook.
+        </div>
+
+        <form method="POST" action="/playbooks/{{.Playbook.ID}}/survey">
+          <div class="section">
+            <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
+              <span>Champs du formulaire</span>
+              <button type="button" class="btn btn-sm" onclick="addField()">+ Ajouter un champ</button>
+            </div>
+            <div class="section-body">
+              <div style="display:grid;grid-template-columns:1fr 1fr 120px auto auto;gap:8px;margin-bottom:8px">
+                <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">Label</span>
+                <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">Var Ansible</span>
+                <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">Type</span>
+                <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">Requis</span>
+                <span></span>
+              </div>
+              <div id="fields-list">
+                {{range .SurveyFields}}
+                <div class="survey-row">
+                  <input type="text" name="label" value="{{.Label}}" placeholder="Environnement">
+                  <input type="text" name="var_name" value="{{.VarName}}" placeholder="env">
+                  <select name="type">
+                    <option value="text"   {{if eq .Type "text"}}selected{{end}}>Texte</option>
+                    <option value="select" {{if eq .Type "select"}}selected{{end}}>Liste</option>
+                    <option value="bool"   {{if eq .Type "bool"}}selected{{end}}>Booléen</option>
+                  </select>
+                  <label class="form-check"><input type="checkbox" name="required" {{if .Required}}checked{{end}}></label>
+                  <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.survey-row').remove()">✕</button>
+                </div>
+                {{end}}
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+            <a href="/playbooks" class="btn">Annuler</a>
+            <button type="submit" class="btn btn-primary">Enregistrer</button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function addField() {
+      const div = document.createElement('div');
+      div.className = 'survey-row';
+      div.innerHTML = `
+        <input type="text" name="label" placeholder="Label affiché">
+        <input type="text" name="var_name" placeholder="nom_variable">
+        <select name="type">
+          <option value="text">Texte</option>
+          <option value="select">Liste</option>
+          <option value="bool">Booléen</option>
+        </select>
+        <label class="form-check"><input type="checkbox" name="required"></label>
+        <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.survey-row').remove()">✕</button>
+      `;
+      document.getElementById('fields-list').appendChild(div);
+    }
+  </script>
+</body>
+</html>

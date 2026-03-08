@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gomme — Dashboard</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <div class="app-layout">
+
+    <nav class="navbar">
+      <span class="nav-brand">Gomme</span>
+      <div class="nav-links">
+        <a href="/dashboard" class="active">Dashboard</a>
+        <a href="/inventory/list">Inventaire</a>
+        <a href="/repository">Repositories</a>
+        <a href="/playbooks">Playbooks</a>
+        <a href="/tasks">Tâches</a>
+        <a href="/organizations">Organisations</a>
+        <a href="/credentials">Identifiants</a>
+        {{if .User.IsAdmin}}<a href="/admin/users">Admin</a>{{end}}
+      </div>
+      <div class="nav-user">
+        <a href="/change-password" style="color:var(--text-muted);font-size:13px;text-decoration:none">{{.User.Username}}</a>
+        <a href="/logout">Déconnexion</a>
+      </div>
+    </nav>
+
+    <div class="content-layout" style="overflow-y:auto;">
+      <div class="page-content">
+
+        <div class="page-header">
+          <h1 class="page-title">Dashboard</h1>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card-lg">
+            <div class="stat-value">{{.TotalRuns}}</div>
+            <div class="stat-label">Executions totales</div>
+          </div>
+          <div class="stat-card-lg">
+            <div class="stat-value" style="color:var(--green)">{{.SuccessRuns}}</div>
+            <div class="stat-label">Succès</div>
+          </div>
+          <div class="stat-card-lg">
+            <div class="stat-value" style="color:var(--red)">{{.FailedRuns}}</div>
+            <div class="stat-label">Échecs</div>
+          </div>
+          <div class="stat-card-lg">
+            <div class="stat-value">{{.RunningRuns}}</div>
+            <div class="stat-label">En cours</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;align-items:start;">
+          <div class="section">
+            <div class="section-header">Activité (30 derniers jours)</div>
+            <div class="section-body">
+              <canvas id="chart-line" height="180"></canvas>
+            </div>
+          </div>
+          <div class="section">
+            <div class="section-header">Répartition des statuts</div>
+            <div class="section-body" style="display:flex;align-items:center;justify-content:center;">
+              <div style="width:200px;height:200px;position:relative;">
+                <canvas id="chart-doughnut"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">Historique récent</div>
+          <div class="table-container" style="border:none;border-radius:0;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Playbook</th>
+                  <th>Inventaire</th>
+                  <th>Statut</th>
+                  <th>Démarré</th>
+                  <th>Durée</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {{range .RecentRuns}}
+                <tr>
+                  <td style="color:var(--text-muted)"><a href="/runs/{{.ID}}">#{{.ID}}</a></td>
+                  <td><a href="/playbooks/{{.PlaybookID}}/edit">{{.Playbook.Name}}</a></td>
+                  <td>
+                    {{if .Inventories}}
+                    {{range .Inventories}}<a href="/inventory/{{.InventoryID}}">{{.Inventory.Name}}</a>{{if .GroupFilter}} <span style="color:var(--text-muted)">({{.GroupFilter}})</span>{{end}} {{end}}
+                    {{else}}-{{end}}
+                  </td>
+                  <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
+                  <td style="color:var(--text-muted)">{{if .StartedAt}}{{.StartedAt.Format "02/01 15:04"}}{{end}}</td>
+                  <td style="color:var(--text-muted)">
+                    {{if and .StartedAt .FinishedAt}}
+                      {{.FinishedAt.Sub .StartedAt}}
+                    {{else}}-{{end}}
+                  </td>
+                  <td><a href="/runs/{{.ID}}" class="btn btn-sm">Voir</a></td>
+                </tr>
+                {{else}}
+                <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px">Aucune execution</td></tr>
+                {{end}}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/chart.umd.min.js"></script>
+  <script>
+    const labels  = [{{.ChartLabels}}];
+    const success = [{{.ChartSuccess}}];
+    const failed  = [{{.ChartFailed}}];
+
+    new Chart(document.getElementById('chart-line'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Succès', data: success, borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.1)', tension: 0.3, fill: true },
+          { label: 'Échecs', data: failed,  borderColor: '#f85149', backgroundColor: 'rgba(248,81,73,0.1)',  tension: 0.3, fill: true },
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#8b949e', font: { size: 12 } } } },
+        scales: {
+          x: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } },
+          y: { ticks: { color: '#8b949e', stepSize: 1 }, grid: { color: '#21262d' }, beginAtZero: true },
+        }
+      }
+    });
+
+    const total = {{.TotalRuns}};
+    new Chart(document.getElementById('chart-doughnut'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Succès', 'Échecs', 'En cours'],
+        datasets: [{
+          data: [{{.SuccessRuns}}, {{.FailedRuns}}, {{.RunningRuns}}],
+          backgroundColor: ['#3fb950', '#f85149', '#58a6ff'],
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { color: '#8b949e', font: { size: 12 }, padding: 12 } } },
+        cutout: '65%',
+      }
+    });
+  </script>
+</body>
+</html>

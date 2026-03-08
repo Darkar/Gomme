@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gomme — Tâches</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <div class="app-layout">
+
+    <nav class="navbar">
+      <span class="nav-brand">Gomme</span>
+      <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/inventory/list">Inventaire</a>
+        <a href="/repository">Repositories</a>
+        <a href="/playbooks">Playbooks</a>
+        <a href="/tasks" class="active">Tâches</a>
+        <a href="/organizations">Organisations</a>
+        <a href="/credentials">Identifiants</a>
+        {{if .User.IsAdmin}}<a href="/admin/users">Admin</a>{{end}}
+      </div>
+      <div class="nav-user">
+        <a href="/change-password" style="color:var(--text-muted);font-size:13px;text-decoration:none">{{.User.Username}}</a>
+        <a href="/logout">Déconnexion</a>
+      </div>
+    </nav>
+
+    <div class="content-layout" style="overflow-y:auto;">
+      <div class="page-content">
+
+        {{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
+        {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+
+        <div class="page-header">
+          <h1 class="page-title">Tâches planifiées</h1>
+          <button class="btn btn-primary" onclick="openModal('modal-new')">+ Nouvelle tâche</button>
+        </div>
+
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Playbook</th>
+                <th>Expression cron</th>
+                <th>Actif</th>
+                <th>Dernière exécution</th>
+                <th>Créé par</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Tasks}}
+              <tr>
+                <td style="font-weight:500">{{.Name}}</td>
+                <td>
+                  <a href="/playbooks/{{.PlaybookID}}/edit?tab=schedule">{{.Playbook.Name}}</a>
+                </td>
+                <td><code style="font-size:12px">{{.CronExpr}}</code></td>
+                <td>
+                  <form method="POST" action="/tasks/{{.ID}}/toggle" style="display:inline">
+                    <button type="submit" class="btn btn-sm {{if .Enabled}}btn-primary{{end}}">
+                      {{if .Enabled}}Actif{{else}}Inactif{{end}}
+                    </button>
+                  </form>
+                </td>
+                <td style="color:var(--text-muted);font-size:12px">
+                  {{if .LastRunAt}}{{.LastRunAt.Format "02/01/2006 15:04"}}{{else}}—{{end}}
+                </td>
+                <td style="color:var(--text-muted);font-size:12px">{{.User.Username}}</td>
+                <td>
+                  <div class="actions">
+                    <a href="/playbooks/{{.PlaybookID}}/edit?tab=schedule" class="btn btn-sm">Modifier</a>
+                    <form method="POST" action="/tasks/{{.ID}}/delete" style="display:inline">
+                      <button type="submit" class="btn btn-sm btn-danger"
+                        onclick="return confirm('Supprimer cette tâche ?')">Supprimer</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {{else}}
+              <tr>
+                <td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px">
+                  Aucune tâche planifiée — créez-en une ci-dessus ou depuis l'onglet Planification d'un playbook.
+                </td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal nouvelle tâche -->
+  <div class="modal-overlay" id="modal-new">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Nouvelle tâche</h2>
+        <button class="modal-close" onclick="closeModal('modal-new')">✕</button>
+      </div>
+      <form method="POST" action="/tasks">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Nom</label>
+            <input type="text" name="name" placeholder="ex: Sauvegarde quotidienne" required>
+          </div>
+          <div class="form-group">
+            <label>Playbook</label>
+            <select name="playbook_id" required>
+              <option value="">— Sélectionner —</option>
+              {{range .Playbooks}}
+              <option value="{{.ID}}">{{.Name}}</option>
+              {{end}}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Expression cron <span style="color:var(--text-muted);font-size:11px;font-weight:normal">min heure j-mois mois j-semaine</span></label>
+            <input type="text" name="cron_expr" placeholder="0 2 * * *" required>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">
+              <button type="button" class="btn btn-sm" onclick="setCron('0 2 * * *')">Tous les jours à 2h</button>
+              <button type="button" class="btn btn-sm" onclick="setCron('0 * * * *')">Toutes les heures</button>
+              <button type="button" class="btn btn-sm" onclick="setCron('*/30 * * * *')">Toutes les 30 min</button>
+              <button type="button" class="btn btn-sm" onclick="setCron('0 9 * * 1')">Lundi à 9h</button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" onclick="closeModal('modal-new')">Annuler</button>
+          <button type="submit" class="btn btn-primary">Créer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openModal(id)  { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+      el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+    });
+    function setCron(expr) {
+      document.querySelector('#modal-new input[name="cron_expr"]').value = expr;
+    }
+  </script>
+</body>
+</html>
