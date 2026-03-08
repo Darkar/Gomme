@@ -67,7 +67,7 @@
                 <td style="color:var(--text-muted)">{{.ID}}</td>
                 <td>{{.User.Username}}</td>
                 <td>{{.Playbook.Name}}</td>
-                <td>{{if .Inventory}}{{.Inventory.Name}}{{else}}localhost{{end}}</td>
+                <td>{{if .Inventories}}{{range .Inventories}}{{.Inventory.Name}} {{end}}{{else}}localhost{{end}}</td>
                 <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
                 <td style="color:var(--text-muted)">{{if .StartedAt}}{{.StartedAt.Format "02/01 15:04"}}{{end}}</td>
                 <td><a href="/runs/{{.ID}}" class="btn btn-sm">Voir</a></td>

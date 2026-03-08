@@ -100,7 +100,7 @@ func (h *Handler) AdminUserDelete(c echo.Context) error {
 func (h *Handler) AdminPlaybooks(c echo.Context) error {
 	user := c.Get("user").(*models.User)
 	data := AdminPlaybooksData{User: user}
-	h.DB.Preload("Playbook").Preload("User").Preload("Inventories").
+	h.DB.Preload("Playbook").Preload("User").Preload("Inventories.Inventory").
 		Order("id desc").Limit(100).Find(&data.Runs)
 	return c.Render(http.StatusOK, "admin/playbooks", data)
 }
