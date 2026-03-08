@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"gomme/models"
 	"net/http"
@@ -32,6 +33,8 @@ type DashboardData struct {
 	ChartLabels  string
 	ChartSuccess string
 	ChartFailed  string
+	HeatmapData  string // JSON [[date, count], ...]
+	HeatmapYear  string // année de début du calendrier
 }
 
 func (h *Handler) Dashboard(c echo.Context) error {
@@ -47,16 +50,13 @@ func (h *Handler) Dashboard(c echo.Context) error {
 		data.SuccessRate = int(data.SuccessRuns * 100 / data.TotalRuns)
 	}
 
-	// Durée moyenne des runs terminés
 	data.AvgDuration = h.buildAvgDuration(user.ID)
 
-	// Runs en cours
 	h.DB.Preload("Playbook").Preload("Inventories.Inventory").
 		Where("user_id = ? AND status = ?", user.ID, "running").
 		Order("id desc").
 		Find(&data.ActiveRuns)
 
-	// Top 5 playbooks
 	data.TopPlaybooks = h.buildTopPlaybooks(user.ID)
 
 	h.DB.Preload("Playbook").Preload("Inventories.Inventory").
@@ -66,6 +66,7 @@ func (h *Handler) Dashboard(c echo.Context) error {
 		Find(&data.RecentRuns)
 
 	data.ChartLabels, data.ChartSuccess, data.ChartFailed = h.buildChartData(user.ID)
+	data.HeatmapData, data.HeatmapYear = h.buildHeatmapData(user.ID)
 
 	return c.Render(http.StatusOK, "dashboard", data)
 }
@@ -132,8 +133,10 @@ func (h *Handler) buildChartData(userID uint) (labels, successes, failures strin
 		Failed  int
 	}
 
+	now := time.Now()
+	start := now.AddDate(0, 0, -29)
+
 	var results []dayCount
-	start := time.Now().AddDate(0, 0, -29)
 	h.DB.Raw(`
 		SELECT DATE(started_at) as day,
 		       CAST(SUM(status = 'success') AS UNSIGNED) as success,
@@ -149,19 +152,51 @@ func (h *Handler) buildChartData(userID uint) (labels, successes, failures strin
 		byDay[r.Day] = r
 	}
 
-	lbls := make([]string, 30)
-	scs := make([]string, 30)
-	fls := make([]string, 30)
+	today := now.Format("2006-01-02")
+	lbls := make([]string, 0, 30)
+	scs := make([]string, 0, 30)
+	fls := make([]string, 0, 30)
 	for i := 0; i < 30; i++ {
-		day := start.AddDate(0, 0, i).Format("2006-01-02")
-		lbls[i] = fmt.Sprintf("%q", day)
-		if r, ok := byDay[day]; ok {
-			scs[i] = fmt.Sprintf("%d", r.Success)
-			fls[i] = fmt.Sprintf("%d", r.Failed)
+		t := start.AddDate(0, 0, i)
+		key := t.Format("2006-01-02")
+		if key > today {
+			break
+		}
+		lbls = append(lbls, fmt.Sprintf("'%s'", t.Format("02/01")))
+		if r, ok := byDay[key]; ok {
+			scs = append(scs, fmt.Sprintf("%d", r.Success))
+			fls = append(fls, fmt.Sprintf("%d", r.Failed))
 		} else {
-			scs[i] = "0"
-			fls[i] = "0"
+			scs = append(scs, "0")
+			fls = append(fls, "0")
 		}
 	}
 	return strings.Join(lbls, ","), strings.Join(scs, ","), strings.Join(fls, ",")
+}
+
+func (h *Handler) buildHeatmapData(userID uint) (jsonData, year string) {
+	type dayCount struct {
+		Day   string
+		Total int
+	}
+
+	now := time.Now()
+	start := now.AddDate(-1, 0, 0) // 1 an en arrière
+
+	var results []dayCount
+	h.DB.Raw(`
+		SELECT DATE(started_at) as day, COUNT(*) as total
+		FROM playbook_runs
+		WHERE user_id = ? AND started_at >= ?
+		GROUP BY DATE(started_at)
+		ORDER BY day ASC
+	`, userID, start).Scan(&results)
+
+	pairs := make([][2]interface{}, 0, len(results))
+	for _, r := range results {
+		pairs = append(pairs, [2]interface{}{r.Day, r.Total})
+	}
+
+	b, _ := json.Marshal(pairs)
+	return string(b), start.Format("2006-01-02")
 }

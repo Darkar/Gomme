@@ -38,6 +38,8 @@ func (t *TemplateRenderer) Render(w io.Writer, name string, data interface{}, c 
 
 func loadTemplates() (*template.Template, error) {
 	root := template.New("").Funcs(template.FuncMap{
+		"prev": func(n int) int { return n - 1 },
+		"next": func(n int) int { return n + 1 },
 		"splitOpts": func(opts string) [][2]string {
 			var result [][2]string
 			for _, line := range strings.Split(opts, "\n") {
@@ -123,7 +125,11 @@ func main() {
 	auth.GET("/change-password", h.ChangePassword)
 	auth.POST("/change-password", h.ChangePasswordPost)
 
+	auth.GET("/profile", h.Profile)
+	auth.POST("/profile/password", h.ProfilePasswordPost)
+
 	auth.GET("/dashboard", h.Dashboard)
+	auth.GET("/history", h.History)
 
 	auth.GET("/inventory", h.InventoryRedirect)
 	auth.GET("/inventory/list", h.InventoryList)

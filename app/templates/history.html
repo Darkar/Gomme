@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gomme — Historique</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <div class="app-layout">
+
+    <nav class="navbar">
+      <span class="nav-brand">Gomme</span>
+      <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/inventory/list">Inventaire</a>
+        <a href="/repository">Repositories</a>
+        <a href="/playbooks">Playbooks</a>
+        <a href="/tasks">Tâches</a>
+        <a href="/history" class="active">Historique</a>
+        <a href="/organizations">Organisations</a>
+        <a href="/credentials">Identifiants</a>
+      </div>
+      <div class="nav-user">
+        <details class="nav-dropdown">
+          <summary>{{.User.Username}}</summary>
+          <div class="nav-dropdown-menu">
+            <a href="/profile">Profil</a>
+            {{if .User.IsAdmin}}<a href="/admin/users">Administration</a>{{end}}
+            <div class="dropdown-sep"></div>
+            <a href="/logout" class="dropdown-danger">Déconnexion</a>
+          </div>
+        </details>
+      </div>
+    </nav>
+
+    <div class="content-layout" style="overflow-y:auto;">
+      <div class="page-content">
+
+        <div class="page-header">
+          <h1 class="page-title">Historique</h1>
+          <span style="color:var(--text-muted);font-size:13px;">{{.Total}} exécution(s)</span>
+        </div>
+
+        <!-- Barre de recherche et filtres -->
+        <form method="GET" action="/history" style="display:flex;gap:8px;margin-bottom:20px;align-items:center;flex-wrap:wrap;">
+          <input
+            type="text"
+            name="q"
+            value="{{.Query}}"
+            placeholder="Rechercher un playbook…"
+            style="flex:1;min-width:200px;"
+          >
+          <select name="status" style="width:150px;">
+            <option value="" {{if eq .Status ""}}selected{{end}}>Tous les statuts</option>
+            <option value="success" {{if eq .Status "success"}}selected{{end}}>Succès</option>
+            <option value="failed"  {{if eq .Status "failed"}} selected{{end}}>Échecs</option>
+            <option value="running" {{if eq .Status "running"}}selected{{end}}>En cours</option>
+            <option value="pending" {{if eq .Status "pending"}}selected{{end}}>En attente</option>
+          </select>
+          <button type="submit" class="btn btn-primary">Filtrer</button>
+          {{if or .Query .Status}}
+          <a href="/history" class="btn">Réinitialiser</a>
+          {{end}}
+        </form>
+
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Utilisateur</th>
+                <th>Playbook</th>
+                <th>Inventaire</th>
+                <th>Statut</th>
+                <th>Démarré</th>
+                <th>Durée</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Runs}}
+              <tr>
+                <td style="color:var(--text-muted)"><a href="/runs/{{.ID}}">#{{.ID}}</a></td>
+                <td style="color:var(--text-muted)">{{.User.Username}}</td>
+                <td><a href="/playbooks/{{.PlaybookID}}/edit">{{.Playbook.Name}}</a></td>
+                <td>
+                  {{if .Inventories}}
+                  {{range .Inventories}}<a href="/inventory/{{.InventoryID}}">{{.Inventory.Name}}</a>{{if .GroupFilter}} <span style="color:var(--text-muted)">({{.GroupFilter}})</span>{{end}} {{end}}
+                  {{else}}-{{end}}
+                </td>
+                <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
+                <td style="color:var(--text-muted)">{{if .StartedAt}}{{.StartedAt.Format "02/01 15:04"}}{{end}}</td>
+                <td style="color:var(--text-muted)">
+                  {{if and .StartedAt .FinishedAt}}{{.FinishedAt.Sub .StartedAt}}{{else}}-{{end}}
+                </td>
+                <td><a href="/runs/{{.ID}}" class="btn btn-sm">Voir</a></td>
+              </tr>
+              {{else}}
+              <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:40px">Aucune exécution trouvée</td></tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        {{if gt .TotalPages 1}}
+        <div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-top:20px;flex-wrap:wrap;">
+
+          {{if gt .Page 1}}
+          <a href="/history?page={{.Page | prev}}&q={{.Query}}&status={{.Status}}" class="btn btn-sm">‹</a>
+          {{else}}
+          <span class="btn btn-sm" style="opacity:0.3;cursor:default;">‹</span>
+          {{end}}
+
+          {{$cur := .Page}}{{$q := .Query}}{{$s := .Status}}
+          {{range .Pages}}
+          {{if eq . $cur}}
+          <span class="btn btn-sm btn-primary" style="min-width:36px;text-align:center;">{{.}}</span>
+          {{else}}
+          <a href="/history?page={{.}}&q={{$q}}&status={{$s}}" class="btn btn-sm" style="min-width:36px;text-align:center;">{{.}}</a>
+          {{end}}
+          {{end}}
+
+          {{if lt .Page .TotalPages}}
+          <a href="/history?page={{.Page | next}}&q={{.Query}}&status={{.Status}}" class="btn btn-sm">›</a>
+          {{else}}
+          <span class="btn btn-sm" style="opacity:0.3;cursor:default;">›</span>
+          {{end}}
+
+        </div>
+        <div style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:8px;">
+          Page {{.Page}} / {{.TotalPages}} — {{.Total}} résultats
+        </div>
+        {{end}}
+
+      </div>
+    </div>
+  </div>
+</body>
+</html>

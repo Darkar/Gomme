@@ -18,13 +18,20 @@
         <a href="/repository">Repositories</a>
         <a href="/playbooks">Playbooks</a>
         <a href="/tasks">Tâches</a>
+        <a href="/history">Historique</a>
         <a href="/organizations">Organisations</a>
         <a href="/credentials">Identifiants</a>
-        {{if .User.IsAdmin}}<a href="/admin/users">Admin</a>{{end}}
       </div>
       <div class="nav-user">
-        <a href="/change-password" style="color:var(--text-muted);font-size:13px;text-decoration:none">{{.User.Username}}</a>
-        <a href="/logout">Déconnexion</a>
+        <details class="nav-dropdown">
+          <summary>{{.User.Username}}</summary>
+          <div class="nav-dropdown-menu">
+            <a href="/profile">Profil</a>
+            {{if .User.IsAdmin}}<a href="/admin/users">Administration</a>{{end}}
+            <div class="dropdown-sep"></div>
+            <a href="/logout" class="dropdown-danger">Déconnexion</a>
+          </div>
+        </details>
       </div>
     </nav>
 
@@ -68,9 +75,7 @@
             <div class="stat-label">En cours</div>
           </div>
           <div class="stat-card-lg">
-            <div style="display:flex;align-items:baseline;gap:4px;">
-              <div class="stat-value" style="color:{{if ge .SuccessRate 80}}var(--green){{else if ge .SuccessRate 50}}var(--yellow){{else}}var(--red){{end}}">{{.SuccessRate}}%</div>
-            </div>
+            <div class="stat-value" style="color:{{if ge .SuccessRate 80}}var(--green){{else if ge .SuccessRate 50}}var(--yellow){{else}}var(--red){{end}}">{{.SuccessRate}}%</div>
             <div style="height:4px;background:var(--bg-3);border-radius:2px;margin:6px 0 4px;">
               <div style="height:4px;border-radius:2px;width:{{.SuccessRate}}%;background:{{if ge .SuccessRate 80}}var(--green){{else if ge .SuccessRate 50}}var(--yellow){{else}}var(--red){{end}};transition:width .3s;"></div>
             </div>
@@ -82,20 +87,29 @@
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;align-items:start;">
+        <!-- Graphiques ligne + donut -->
+        <div style="display:grid;grid-template-columns:{{if gt .TotalRuns 0}}1fr 1fr{{else}}1fr{{end}};gap:20px;margin-bottom:24px;align-items:start;">
+          {{if gt .TotalRuns 0}}
           <div class="section">
             <div class="section-header">Activité (30 derniers jours)</div>
-            <div class="section-body">
-              <canvas id="chart-line" height="180"></canvas>
+            <div class="section-body" style="padding:8px 0 0;">
+              <div id="chart-line" style="height:220px;width:100%;"></div>
             </div>
           </div>
+          {{end}}
           <div class="section">
             <div class="section-header">Répartition des statuts</div>
-            <div class="section-body" style="display:flex;align-items:center;justify-content:center;">
-              <div style="width:200px;height:200px;position:relative;">
-                <canvas id="chart-doughnut"></canvas>
-              </div>
+            <div class="section-body" style="padding:8px 0 0;">
+              <div id="chart-doughnut" style="height:220px;width:100%;"></div>
             </div>
+          </div>
+        </div>
+
+        <!-- Heatmap calendrier -->
+        <div class="section" style="margin-bottom:24px;">
+          <div class="section-header">Activité sur 12 mois</div>
+          <div class="section-body" style="padding:8px 0 0;">
+            <div id="chart-heatmap" style="height:160px;width:100%;"></div>
           </div>
         </div>
 
@@ -187,46 +201,155 @@
     }
   </style>
 
-  <script src="/static/js/chart.umd.min.js"></script>
+  <script src="/static/js/echarts.min.js"></script>
   <script>
-    const labels  = [{{.ChartLabels}}];
-    const success = [{{.ChartSuccess}}];
-    const failed  = [{{.ChartFailed}}];
+    const COLORS = {
+      green:   '#3fb950',
+      red:     '#f85149',
+      blue:    '#58a6ff',
+      muted:   '#8b949e',
+      grid:    '#21262d',
+      bg:      '#161b22',
+      tooltip: '#1c2128',
+    };
 
-    new Chart(document.getElementById('chart-line'), {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          { label: 'Succès', data: success, borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.1)', tension: 0.3, fill: true },
-          { label: 'Échecs', data: failed,  borderColor: '#f85149', backgroundColor: 'rgba(248,81,73,0.1)',  tension: 0.3, fill: true },
-        ]
+    // ── Graphique linéaire ──────────────────────────────────────────────────
+    {{if gt .TotalRuns 0}}
+    const lineLabels  = [{{.ChartLabels}}];
+    const lineSuccess = [{{.ChartSuccess}}];
+    const lineFailed  = [{{.ChartFailed}}];
+
+    echarts.init(document.getElementById('chart-line'), null, {renderer:'canvas'}).setOption({
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: COLORS.tooltip,
+        borderColor: '#30363d',
+        textStyle: { color: '#e6edf3', fontSize: 12 },
+        axisPointer: { lineStyle: { color: '#30363d' } },
       },
-      options: {
-        responsive: true,
-        plugins: { legend: { labels: { color: '#8b949e', font: { size: 12 } } } },
-        scales: {
-          x: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } },
-          y: { ticks: { color: '#8b949e', stepSize: 1 }, grid: { color: '#21262d' }, beginAtZero: true },
-        }
-      }
+      legend: {
+        data: ['Succès', 'Échecs'],
+        textStyle: { color: COLORS.muted, fontSize: 12 },
+        right: 8, top: 4,
+      },
+      grid: { left: 32, right: 16, top: 36, bottom: 28 },
+      xAxis: {
+        type: 'category',
+        data: lineLabels,
+        axisLine: { lineStyle: { color: COLORS.grid } },
+        axisTick: { show: false },
+        axisLabel: { color: COLORS.muted, fontSize: 11, interval: 'auto' },
+      },
+      yAxis: {
+        type: 'value',
+        minInterval: 1,
+        splitLine: { lineStyle: { color: COLORS.grid } },
+        axisLabel: { color: COLORS.muted, fontSize: 11 },
+      },
+      series: [
+        {
+          name: 'Succès', type: 'line', data: lineSuccess,
+          smooth: 0.3, symbol: 'none',
+          lineStyle: { color: COLORS.green, width: 2 },
+          areaStyle: { color: { type:'linear', x:0,y:0,x2:0,y2:1,
+            colorStops:[{offset:0,color:'rgba(63,185,80,0.25)'},{offset:1,color:'rgba(63,185,80,0)'}] } },
+        },
+        {
+          name: 'Échecs', type: 'line', data: lineFailed,
+          smooth: 0.3, symbol: 'none',
+          lineStyle: { color: COLORS.red, width: 2 },
+          areaStyle: { color: { type:'linear', x:0,y:0,x2:0,y2:1,
+            colorStops:[{offset:0,color:'rgba(248,81,73,0.2)'},{offset:1,color:'rgba(248,81,73,0)'}] } },
+        },
+      ],
+    });
+    {{end}}
+
+    // ── Donut statuts ───────────────────────────────────────────────────────
+    const total = {{.TotalRuns}};
+    const doughnutChart = echarts.init(document.getElementById('chart-doughnut'), null, {renderer:'canvas'});
+    doughnutChart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: COLORS.tooltip,
+        borderColor: '#30363d',
+        textStyle: { color: '#e6edf3', fontSize: 12 },
+        formatter: '{b}: {c} ({d}%)',
+      },
+      legend: {
+        orient: 'horizontal', bottom: 8,
+        textStyle: { color: COLORS.muted, fontSize: 12 },
+        itemGap: 16,
+      },
+      graphic: [{
+        type: 'text',
+        left: 'center', top: '38%',
+        style: { text: String(total), fill: '#e6edf3', fontSize: 22, fontWeight: 'bold', fontFamily: 'Inter, sans-serif' },
+      },{
+        type: 'text',
+        left: 'center', top: '52%',
+        style: { text: 'total', fill: COLORS.muted, fontSize: 11, fontFamily: 'Inter, sans-serif' },
+      }],
+      series: [{
+        type: 'pie',
+        radius: ['50%', '72%'],
+        center: ['50%', '45%'],
+        data: [
+          { value: {{.SuccessRuns}}, name: 'Succès',   itemStyle: { color: COLORS.green } },
+          { value: {{.FailedRuns}},  name: 'Échecs',   itemStyle: { color: COLORS.red   } },
+          { value: {{.RunningRuns}}, name: 'En cours', itemStyle: { color: COLORS.blue  } },
+        ],
+        label: { show: false },
+        emphasis: { scale: true, scaleSize: 4 },
+        itemStyle: { borderRadius: 4, borderWidth: 0 },
+      }],
     });
 
-    new Chart(document.getElementById('chart-doughnut'), {
-      type: 'doughnut',
-      data: {
-        labels: ['Succès', 'Échecs', 'En cours'],
-        datasets: [{
-          data: [{{.SuccessRuns}}, {{.FailedRuns}}, {{.RunningRuns}}],
-          backgroundColor: ['#3fb950', '#f85149', '#58a6ff'],
-          borderWidth: 0,
-        }]
+    // ── Heatmap calendrier ─────────────────────────────────────────────────
+    const heatmapData = {{.HeatmapData}};
+    const heatYear    = '{{.HeatmapYear}}';
+    const today       = new Date().toISOString().slice(0, 10);
+    const maxVal      = heatmapData.length ? Math.max(...heatmapData.map(d => d[1])) : 1;
+
+    echarts.init(document.getElementById('chart-heatmap'), null, {renderer:'canvas'}).setOption({
+      backgroundColor: 'transparent',
+      tooltip: {
+        formatter: p => p.value[1]
+          ? `${p.value[0]} : ${p.value[1]} exécution(s)`
+          : `${p.value[0]} : aucune`,
+        backgroundColor: COLORS.tooltip,
+        borderColor: '#30363d',
+        textStyle: { color: '#e6edf3', fontSize: 12 },
       },
-      options: {
-        responsive: true,
-        plugins: { legend: { position: 'bottom', labels: { color: '#8b949e', font: { size: 12 }, padding: 12 } } },
-        cutout: '65%',
-      }
+      visualMap: {
+        min: 0, max: maxVal || 1,
+        calculable: false, show: false,
+        inRange: { color: ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353'] },
+      },
+      calendar: {
+        left: 48, right: 16, top: 16, bottom: 24,
+        range: [heatYear, today],
+        cellSize: ['auto', 14],
+        splitLine: { show: false },
+        itemStyle: { borderWidth: 2, borderColor: '#0d1117', color: '#161b22', borderRadius: 2 },
+        yearLabel: { show: false },
+        monthLabel: {
+          nameMap: ['Jan','Fév','Mars','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'],
+          color: COLORS.muted, fontSize: 11,
+        },
+        dayLabel: {
+          firstDay: 1,
+          nameMap: ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],
+          color: COLORS.muted, fontSize: 10,
+        },
+      },
+      series: [{
+        type: 'heatmap',
+        coordinateSystem: 'calendar',
+        data: heatmapData,
+      }],
     });
   </script>
 </body>
