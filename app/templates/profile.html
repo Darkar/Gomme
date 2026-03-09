@@ -4,41 +4,19 @@
   <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gomme — Profil</title>
+  <title>Gomme — {{T "profile.title"}}</title>
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
   <div class="app-layout">
 
-    <nav class="navbar">
-      <span class="nav-brand">Gomme</span>
-      <div class="nav-links">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/inventory/list">Inventaire</a>
-        <a href="/repository">Repositories</a>
-        <a href="/playbooks">Playbooks</a>
-        <a href="/tasks">Tâches</a>
-        <a href="/organizations">Organisations</a>
-        <a href="/credentials">Identifiants</a>
-      </div>
-      <div class="nav-user">
-        <details class="nav-dropdown">
-          <summary>{{.User.Username}}</summary>
-          <div class="nav-dropdown-menu">
-            <a href="/profile" style="color:var(--text)">Profil</a>
-            {{if .User.IsAdmin}}<a href="/admin/users">Administration</a>{{end}}
-            <div class="dropdown-sep"></div>
-            <a href="/logout" class="dropdown-danger">Déconnexion</a>
-          </div>
-        </details>
-      </div>
-    </nav>
+    {{template "navbar" .}}
 
     <div class="content-layout" style="overflow-y:auto;">
       <div class="page-content" style="max-width:640px;">
 
         <div class="page-header">
-          <h1 class="page-title">Profil</h1>
+          <h1 class="page-title">{{T "profile.title"}}</h1>
         </div>
 
         {{if .Success}}
@@ -50,38 +28,54 @@
 
         <!-- Informations du compte -->
         <div class="section" style="margin-bottom:24px;">
-          <div class="section-header">Compte</div>
+          <div class="section-header">{{T "profile.account"}}</div>
           <div class="section-body">
-            <div style="display:grid;grid-template-columns:120px 1fr;gap:10px 16px;align-items:center;font-size:13px;">
-              <span style="color:var(--text-muted)">Identifiant</span>
+            <div style="display:grid;grid-template-columns:140px 1fr;gap:10px 16px;align-items:center;font-size:13px;">
+              <span style="color:var(--text-muted)">{{T "profile.username"}}</span>
               <span>{{.User.Username}}</span>
-              <span style="color:var(--text-muted)">Rôle</span>
-              <span>{{if .User.IsAdmin}}<span class="badge badge-running">Administrateur</span>{{else}}<span style="color:var(--text-muted)">Utilisateur</span>{{end}}</span>
-              <span style="color:var(--text-muted)">Membre depuis</span>
+              <span style="color:var(--text-muted)">{{T "profile.role"}}</span>
+              <span>{{if .User.IsAdmin}}<span class="badge badge-running">{{T "badge.admin"}}</span>{{else}}<span style="color:var(--text-muted)">{{T "badge.user"}}</span>{{end}}</span>
+              <span style="color:var(--text-muted)">{{T "profile.member_since"}}</span>
               <span style="color:var(--text-muted)">{{.User.CreatedAt.Format "02/01/2006"}}</span>
             </div>
           </div>
         </div>
 
+        <!-- Langue -->
+        <div class="section" style="margin-bottom:24px;">
+          <div class="section-header">{{T "profile.language"}}</div>
+          <div class="section-body">
+            <form method="POST" action="/profile/language" style="display:flex;align-items:center;gap:16px;">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+                <input type="radio" name="language" value="fr" {{if eq .User.Language "fr"}}checked{{end}}> {{T "profile.lang_fr"}}
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+                <input type="radio" name="language" value="en" {{if or (eq .User.Language "en") (eq .User.Language "")}}checked{{end}}> {{T "profile.lang_en"}}
+              </label>
+              <button type="submit" class="btn btn-sm">{{T "profile.save_language"}}</button>
+            </form>
+          </div>
+        </div>
+
         <!-- Sécurité -->
         <div class="section">
-          <div class="section-header">Sécurité</div>
+          <div class="section-header">{{T "profile.security"}}</div>
           <div class="section-body">
             <form method="POST" action="/profile/password" style="display:flex;flex-direction:column;gap:14px;">
               <div class="form-group" style="margin:0;">
-                <label for="current_password">Mot de passe actuel</label>
+                <label for="current_password">{{T "form.current_password"}}</label>
                 <input type="password" id="current_password" name="current_password" autocomplete="current-password" required>
               </div>
               <div class="form-group" style="margin:0;">
-                <label for="new_password">Nouveau mot de passe</label>
+                <label for="new_password">{{T "form.new_password"}}</label>
                 <input type="password" id="new_password" name="new_password" autocomplete="new-password" minlength="6" required>
               </div>
               <div class="form-group" style="margin:0;">
-                <label for="confirm_password">Confirmer le mot de passe</label>
+                <label for="confirm_password">{{T "form.confirm_password"}}</label>
                 <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password" minlength="6" required>
               </div>
               <div>
-                <button type="submit" class="btn btn-primary">Changer le mot de passe</button>
+                <button type="submit" class="btn btn-primary">{{T "profile.change_password"}}</button>
               </div>
             </form>
           </div>

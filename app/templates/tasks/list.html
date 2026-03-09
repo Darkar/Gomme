@@ -4,36 +4,13 @@
   <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gomme — Tâches</title>
+  <title>Gomme — {{T "tasks.title"}}</title>
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
   <div class="app-layout">
 
-    <nav class="navbar">
-      <span class="nav-brand">Gomme</span>
-      <div class="nav-links">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/inventory/list">Inventaire</a>
-        <a href="/repository">Repositories</a>
-        <a href="/playbooks">Playbooks</a>
-        <a href="/tasks" class="active">Tâches</a>
-        <a href="/history">Historique</a>
-        <a href="/organizations">Organisations</a>
-        <a href="/credentials">Identifiants</a>
-      </div>
-      <div class="nav-user">
-        <details class="nav-dropdown">
-          <summary>{{.User.Username}}</summary>
-          <div class="nav-dropdown-menu">
-            <a href="/profile">Profil</a>
-            {{if .User.IsAdmin}}<a href="/admin/users">Administration</a>{{end}}
-            <div class="dropdown-sep"></div>
-            <a href="/logout" class="dropdown-danger">Déconnexion</a>
-          </div>
-        </details>
-      </div>
-    </nav>
+    {{template "navbar" .}}
 
     <div class="content-layout" style="overflow-y:auto;">
       <div class="page-content">
@@ -42,21 +19,21 @@
         {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
 
         <div class="page-header">
-          <h1 class="page-title">Tâches planifiées</h1>
-          <button class="btn btn-primary" onclick="openModal('modal-new')">+ Nouvelle tâche</button>
+          <h1 class="page-title">{{T "tasks.title"}}</h1>
+          <button class="btn btn-primary" onclick="openModal('modal-new')">{{T "btn.new_task"}}</button>
         </div>
 
         <div class="table-container">
           <table class="table">
             <thead>
               <tr>
-                <th>Nom</th>
-                <th>Playbook</th>
-                <th>Expression cron</th>
-                <th>Actif</th>
-                <th>Dernière exécution</th>
-                <th>Créé par</th>
-                <th>Actions</th>
+                <th>{{T "col.name"}}</th>
+                <th>{{T "col.playbook"}}</th>
+                <th>{{T "tasks.col.expr"}}</th>
+                <th>{{T "tasks.col.active"}}</th>
+                <th>{{T "tasks.col.last_run"}}</th>
+                <th>{{T "tasks.col.created_by"}}</th>
+                <th>{{T "col.actions"}}</th>
               </tr>
             </thead>
             <tbody>
@@ -70,7 +47,7 @@
                 <td>
                   <form method="POST" action="/tasks/{{.ID}}/toggle" style="display:inline">
                     <button type="submit" class="btn btn-sm {{if .Enabled}}btn-primary{{end}}">
-                      {{if .Enabled}}Actif{{else}}Inactif{{end}}
+                      {{if .Enabled}}{{T "tasks.active"}}{{else}}{{T "tasks.inactive"}}{{end}}
                     </button>
                   </form>
                 </td>
@@ -80,10 +57,10 @@
                 <td style="color:var(--text-muted);font-size:12px">{{.User.Username}}</td>
                 <td>
                   <div class="actions">
-                    <a href="/playbooks/{{.PlaybookID}}/edit?tab=schedule" class="btn btn-sm">Modifier</a>
+                    <a href="/playbooks/{{.PlaybookID}}/edit?tab=schedule" class="btn btn-sm">{{T "btn.edit"}}</a>
                     <form method="POST" action="/tasks/{{.ID}}/delete" style="display:inline">
                       <button type="submit" class="btn btn-sm btn-danger"
-                        onclick="return confirm('Supprimer cette tâche ?')">Supprimer</button>
+                        onclick="return confirm('{{T "confirm.delete_task"}}')">{{T "btn.delete"}}</button>
                     </form>
                   </div>
                 </td>
@@ -91,7 +68,7 @@
               {{else}}
               <tr>
                 <td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px">
-                  Aucune tâche planifiée — créez-en une ci-dessus ou depuis l'onglet Planification d'un playbook.
+                  {{T "tasks.no_items"}}
                 </td>
               </tr>
               {{end}}
@@ -107,38 +84,38 @@
   <div class="modal-overlay" id="modal-new">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Nouvelle tâche</h2>
+        <h2>{{T "tasks.modal.title"}}</h2>
         <button class="modal-close" onclick="closeModal('modal-new')">✕</button>
       </div>
       <form method="POST" action="/tasks">
         <div class="modal-body">
           <div class="form-group">
-            <label>Nom</label>
-            <input type="text" name="name" placeholder="ex: Sauvegarde quotidienne" required>
+            <label>{{T "col.name"}}</label>
+            <input type="text" name="name" placeholder="{{T "tasks.modal.name_placeholder"}}" required>
           </div>
           <div class="form-group">
-            <label>Playbook</label>
+            <label>{{T "col.playbook"}}</label>
             <select name="playbook_id" required>
-              <option value="">— Sélectionner —</option>
+              <option value="">— {{T "btn.manage"}} —</option>
               {{range .Playbooks}}
               <option value="{{.ID}}">{{.Name}}</option>
               {{end}}
             </select>
           </div>
           <div class="form-group">
-            <label>Expression cron <span style="color:var(--text-muted);font-size:11px;font-weight:normal">min heure j-mois mois j-semaine</span></label>
+            <label>{{T "tasks.col.expr"}} <span style="color:var(--text-muted);font-size:11px;font-weight:normal">{{T "tasks.cron.hint"}}</span></label>
             <input type="text" name="cron_expr" placeholder="0 2 * * *" required>
             <div style="font-size:11px;color:var(--text-muted);margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">
-              <button type="button" class="btn btn-sm" onclick="setCron('0 2 * * *')">Tous les jours à 2h</button>
-              <button type="button" class="btn btn-sm" onclick="setCron('0 * * * *')">Toutes les heures</button>
-              <button type="button" class="btn btn-sm" onclick="setCron('*/30 * * * *')">Toutes les 30 min</button>
-              <button type="button" class="btn btn-sm" onclick="setCron('0 9 * * 1')">Lundi à 9h</button>
+              <button type="button" class="btn btn-sm" onclick="setCron('0 2 * * *')">{{T "tasks.cron.daily"}}</button>
+              <button type="button" class="btn btn-sm" onclick="setCron('0 * * * *')">{{T "tasks.cron.hourly"}}</button>
+              <button type="button" class="btn btn-sm" onclick="setCron('*/30 * * * *')">{{T "tasks.cron.30min"}}</button>
+              <button type="button" class="btn btn-sm" onclick="setCron('0 9 * * 1')">{{T "tasks.cron.monday"}}</button>
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn" onclick="closeModal('modal-new')">Annuler</button>
-          <button type="submit" class="btn btn-primary">Créer</button>
+          <button type="button" class="btn" onclick="closeModal('modal-new')">{{T "btn.cancel"}}</button>
+          <button type="submit" class="btn btn-primary">{{T "btn.create"}}</button>
         </div>
       </form>
     </div>

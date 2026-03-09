@@ -10,30 +10,7 @@
 <body>
   <div class="app-layout">
 
-    <nav class="navbar">
-      <span class="nav-brand">Gomme</span>
-      <div class="nav-links">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/inventory/list">Inventaire</a>
-        <a href="/repository">Repositories</a>
-        <a href="/playbooks" class="active">Playbooks</a>
-        <a href="/tasks">Tâches</a>
-        <a href="/history">Historique</a>
-        <a href="/organizations">Organisations</a>
-        <a href="/credentials">Identifiants</a>
-      </div>
-      <div class="nav-user">
-        <details class="nav-dropdown">
-          <summary>{{.User.Username}}</summary>
-          <div class="nav-dropdown-menu">
-            <a href="/profile">Profil</a>
-            {{if .User.IsAdmin}}<a href="/admin/users">Administration</a>{{end}}
-            <div class="dropdown-sep"></div>
-            <a href="/logout" class="dropdown-danger">Déconnexion</a>
-          </div>
-        </details>
-      </div>
-    </nav>
+    {{template "navbar" .}}
 
     <div class="content-layout" style="overflow-y:auto;">
       <div class="page-content" style="max-width:720px">
@@ -41,8 +18,8 @@
         <div class="page-header">
           <h1 class="page-title">{{.Playbook.Name}}</h1>
           <div style="display:flex;gap:8px">
-            <a href="/playbooks/{{.Playbook.ID}}/edit" class="btn">Modifier</a>
-            <a href="/playbooks" class="btn">← Retour</a>
+            <a href="/playbooks/{{.Playbook.ID}}/edit" class="btn">{{T "playbooks.run.modify"}}</a>
+            <a href="/playbooks" class="btn">{{T "btn.back_playbooks"}}</a>
           </div>
         </div>
 
@@ -53,40 +30,40 @@
         <div class="section" style="margin-bottom:16px">
           <div class="section-body" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
             <div>
-              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px">Repository</div>
+              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px">{{T "playbooks.run.repository"}}</div>
               <div style="font-size:13px">{{.Playbook.Repository.Name}}</div>
             </div>
             <div>
-              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px">Chemin</div>
+              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px">{{T "playbooks.run.path"}}</div>
               <code style="font-size:12px;color:var(--text-muted)">{{.Playbook.Path}}</code>
             </div>
           </div>
         </div>
 
-        <!-- Configuration (image Docker + inventaire) -->
+        <!-- Configuration -->
         <form method="POST" action="/playbooks/{{.Playbook.ID}}/config">
           <div class="section" style="margin-bottom:16px">
-            <div class="section-header">Configuration</div>
+            <div class="section-header">{{T "playbooks.run.config"}}</div>
             <div class="modal-body">
               <div class="form-group">
-                <label>Image Docker</label>
+                <label>{{T "playbooks.run.docker_image"}}</label>
                 <select name="docker_image">
-                  <option value="">— Choisir une image —</option>
+                  <option value="">{{T "playbooks.run.choose"}}</option>
                   {{range .DockerImages}}
                   <option value="{{.Name}}" {{if eq .Name $.Playbook.DockerImage}}selected{{end}}>{{.Name}}</option>
                   {{end}}
                 </select>
                 {{if not .DockerImages}}
-                <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Aucune image disponible — demandez à un administrateur d'en ajouter.</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:4px">{{T "playbooks.run.no_images"}}</div>
                 {{end}}
                 {{if .Playbook.DockerImage}}
-                <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Actuelle : <code>{{.Playbook.DockerImage}}</code></div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:4px"><code>{{.Playbook.DockerImage}}</code></div>
                 {{end}}
               </div>
               <div class="form-group">
-                <label>Inventaire par défaut</label>
+                <label>{{T "playbooks.run.default_inventory"}}</label>
                 <select name="inventory_id">
-                  <option value="0">localhost (connexion locale)</option>
+                  <option value="0">{{T "playbooks.run.localhost"}}</option>
                   {{range .Inventories}}
                   <option value="{{.ID}}" {{if eq .ID $.DefaultInventoryID}}selected{{end}}>{{.Name}}</option>
                   {{end}}
@@ -95,35 +72,35 @@
             </div>
           </div>
           <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
-            <button type="submit" class="btn">Enregistrer la configuration</button>
+            <button type="submit" class="btn">{{T "btn.save_config"}}</button>
           </div>
         </form>
 
         <!-- Lancement -->
         <form method="POST" action="/playbooks/{{.Playbook.ID}}/run">
           <div class="section">
-            <div class="section-header">Lancer</div>
+            <div class="section-header">{{T "playbooks.run.launch"}}</div>
             <div class="modal-body">
               {{if not .Playbook.DockerImage}}
-              <div class="alert alert-error" style="margin:0">Image Docker non configurée — enregistrez d'abord la configuration ci-dessus.</div>
+              <div class="alert alert-error" style="margin:0">{{T "playbooks.run.no_image"}}</div>
               {{else}}
               <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
                 Image : <code>{{.Playbook.DockerImage}}</code>
-                {{if .Playbook.DefaultInventory}} · Inventaire : <strong>{{.Playbook.DefaultInventory.Name}}</strong>{{else}} · Inventaire : localhost{{end}}
+                {{if .Playbook.DefaultInventory}} · {{T "playbooks.run.default_inventory"}} : <strong>{{.Playbook.DefaultInventory.Name}}</strong>{{else}} · {{T "playbooks.run.localhost"}}{{end}}
               </div>
               {{if .SurveyFields}}
               <hr style="border:none;border-top:1px solid var(--border);margin:0 0 16px">
-              <div style="font-size:13px;font-weight:600;margin-bottom:12px">Paramètres</div>
+              <div style="font-size:13px;font-weight:600;margin-bottom:12px">{{T "playbooks.run.params"}}</div>
               {{range .SurveyFields}}
               <div class="form-group">
                 <label>{{.Label}}{{if .Required}} <span style="color:var(--red)">*</span>{{end}}</label>
                 {{if eq .Type "bool"}}
                 <label class="form-check">
-                  <input type="checkbox" name="survey_{{.VarName}}"> Activer
+                  <input type="checkbox" name="survey_{{.VarName}}"> {{T "playbooks.run.enable"}}
                 </label>
                 {{else if eq .Type "select"}}
                 <select name="survey_{{.VarName}}" {{if .Required}}required{{end}}>
-                  <option value="">— Choisir —</option>
+                  <option value="">{{T "playbooks.run.choose"}}</option>
                 </select>
                 {{else}}
                 <input type="text" name="survey_{{.VarName}}" {{if .Required}}required{{end}}>
@@ -136,8 +113,8 @@
           </div>
           {{if .Playbook.DockerImage}}
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
-            <a href="/playbooks" class="btn">Annuler</a>
-            <button type="submit" class="btn btn-primary">▶ Lancer le playbook</button>
+            <a href="/playbooks" class="btn">{{T "btn.cancel"}}</a>
+            <button type="submit" class="btn btn-primary">{{T "btn.launch_playbook"}}</button>
           </div>
           {{end}}
         </form>

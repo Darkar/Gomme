@@ -23,6 +23,23 @@ type Source interface {
 	Sync() ([]HostData, []GroupData, error)
 }
 
+// ADGroupConfig définit un groupe LDAP : un nom + un filtre LDAP + une base DN.
+// L'objectClass est auto-détecté (computer pour AD, device pour OpenLDAP).
+type ADGroupConfig struct {
+	Name   string `json:"name"`
+	BaseDN string `json:"base_dn"`
+	Filter string `json:"filter"`
+}
+
+// StoredADConfig est le format JSON stocké en base pour une source ActiveDirectory.
+type StoredADConfig struct {
+	URL         string          `json:"url"`
+	BindDN      string          `json:"bind_dn"`
+	PasswordEnc string          `json:"password_enc,omitempty"`
+	Insecure    bool            `json:"insecure,omitempty"`
+	Groups      []ADGroupConfig `json:"groups,omitempty"`
+}
+
 // StoredProxmoxConfig est le format JSON stocké en base (mots de passe chiffrés).
 type StoredProxmoxConfig struct {
 	AuthMode string `json:"auth_mode"` // "api" ou "ssh"
@@ -97,7 +114,24 @@ func GetSource(sourceType, configJSON, secretKey string) (Source, error) {
 
 		return &ProxmoxSource{Config: cfg}, nil
 	case "ad":
-		return nil, fmt.Errorf("source ActiveDirectory non encore implémentée")
+		var stored StoredADConfig
+		if err := json.Unmarshal([]byte(configJSON), &stored); err != nil {
+			return nil, fmt.Errorf("config AD invalide: %w", err)
+		}
+		cfg := ADConfig{
+			URL:      stored.URL,
+			BindDN:   stored.BindDN,
+			Insecure: stored.Insecure,
+			Groups:   stored.Groups,
+		}
+		if stored.PasswordEnc != "" {
+			plain, err := crypto.Decrypt(secretKey, stored.PasswordEnc)
+			if err != nil {
+				return nil, fmt.Errorf("déchiffrement mot de passe AD: %w", err)
+			}
+			cfg.Password = plain
+		}
+		return &ADSource{Config: cfg}, nil
 	case "ocs":
 		return nil, fmt.Errorf("source OCSInventory non encore implémentée")
 	case "vcenter":

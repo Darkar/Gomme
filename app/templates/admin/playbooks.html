@@ -4,47 +4,24 @@
   <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gomme — Admin — Exécutions</title>
+  <title>Gomme — {{T "admin.sidebar.title"}} — {{T "admin.playbooks.title"}}</title>
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
   <div class="app-layout">
 
-    <nav class="navbar">
-      <span class="nav-brand">Gomme</span>
-      <div class="nav-links">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/inventory/list">Inventaire</a>
-        <a href="/repository">Repositories</a>
-        <a href="/playbooks">Playbooks</a>
-        <a href="/tasks">Tâches</a>
-        <a href="/history">Historique</a>
-        <a href="/organizations">Organisations</a>
-        <a href="/credentials">Identifiants</a>
-      </div>
-      <div class="nav-user">
-        <details class="nav-dropdown">
-          <summary>{{.User.Username}}</summary>
-          <div class="nav-dropdown-menu">
-            <a href="/profile">Profil</a>
-            {{if .User.IsAdmin}}<a href="/admin/users">Administration</a>{{end}}
-            <div class="dropdown-sep"></div>
-            <a href="/logout" class="dropdown-danger">Déconnexion</a>
-          </div>
-        </details>
-      </div>
-    </nav>
+    {{template "navbar" .}}
 
     <div class="content-layout" style="overflow-y:auto;">
 
       <aside class="sidebar">
         <div class="sidebar-section">
-          <h3>Administration</h3>
+          <h3>{{T "admin.sidebar.title"}}</h3>
           <div style="display:flex;flex-direction:column;gap:4px">
-            <a href="/admin/users" style="color:var(--text-muted);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px">Utilisateurs</a>
-            <a href="/admin/playbooks" style="color:var(--text);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px;background:var(--bg-3)">Exécutions</a>
-            <a href="/admin/images" style="color:var(--text-muted);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px">Images</a>
-            <a href="/admin/settings" style="color:var(--text-muted);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px">Paramètres</a>
+            <a href="/admin/users" style="color:var(--text-muted);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px">{{T "admin.sidebar.users"}}</a>
+            <a href="/admin/playbooks" style="color:var(--text);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px;background:var(--bg-3)">{{T "admin.sidebar.runs"}}</a>
+            <a href="/admin/images" style="color:var(--text-muted);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px">{{T "admin.sidebar.images"}}</a>
+            <a href="/admin/settings" style="color:var(--text-muted);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px">{{T "admin.sidebar.settings"}}</a>
           </div>
         </div>
       </aside>
@@ -52,19 +29,19 @@
       <div class="page-content">
 
         <div class="page-header">
-          <h1 class="page-title">Toutes les exécutions</h1>
+          <h1 class="page-title">{{T "admin.playbooks.title"}}</h1>
         </div>
 
         <div class="table-container">
           <table class="table">
             <thead>
               <tr>
-                <th>#</th>
-                <th>Utilisateur</th>
-                <th>Playbook</th>
-                <th>Inventaire</th>
-                <th>Statut</th>
-                <th>Démarré</th>
+                <th>{{T "col.id"}}</th>
+                <th>{{T "col.user"}}</th>
+                <th>{{T "col.playbook"}}</th>
+                <th>{{T "col.inventory"}}</th>
+                <th>{{T "col.status"}}</th>
+                <th>{{T "col.started"}}</th>
                 <th></th>
               </tr>
             </thead>
@@ -74,13 +51,13 @@
                 <td style="color:var(--text-muted)">{{.ID}}</td>
                 <td>{{.User.Username}}</td>
                 <td>{{.Playbook.Name}}</td>
-                <td>{{if .Inventories}}{{range .Inventories}}{{.Inventory.Name}} {{end}}{{else}}localhost{{end}}</td>
+                <td>{{if .Inventories}}{{range .Inventories}}{{.Inventory.Name}} {{end}}{{else}}{{T "label.localhost"}}{{end}}</td>
                 <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
                 <td style="color:var(--text-muted)">{{if .StartedAt}}{{.StartedAt.Format "02/01 15:04"}}{{end}}</td>
-                <td><a href="/runs/{{.ID}}" class="btn btn-sm">Voir</a></td>
+                <td><a href="/runs/{{.ID}}" class="btn btn-sm">{{T "btn.view"}}</a></td>
               </tr>
               {{else}}
-              <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px">Aucune exécution</td></tr>
+              <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px">{{T "admin.playbooks.no_items"}}</td></tr>
               {{end}}
             </tbody>
           </table>

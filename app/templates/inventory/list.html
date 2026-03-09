@@ -4,43 +4,20 @@
   <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gomme — Inventaires</title>
+  <title>Gomme — {{T "inventory.title"}}</title>
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
   <div class="app-layout">
 
-    <nav class="navbar">
-      <span class="nav-brand">Gomme</span>
-      <div class="nav-links">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/inventory/list" class="active">Inventaire</a>
-        <a href="/repository">Repositories</a>
-        <a href="/playbooks">Playbooks</a>
-        <a href="/tasks">Tâches</a>
-        <a href="/history">Historique</a>
-        <a href="/organizations">Organisations</a>
-        <a href="/credentials">Identifiants</a>
-      </div>
-      <div class="nav-user">
-        <details class="nav-dropdown">
-          <summary>{{.User.Username}}</summary>
-          <div class="nav-dropdown-menu">
-            <a href="/profile">Profil</a>
-            {{if .User.IsAdmin}}<a href="/admin/users">Administration</a>{{end}}
-            <div class="dropdown-sep"></div>
-            <a href="/logout" class="dropdown-danger">Déconnexion</a>
-          </div>
-        </details>
-      </div>
-    </nav>
+    {{template "navbar" .}}
 
     <div class="content-layout" style="overflow-y:auto;">
       <div class="page-content">
 
         <div class="page-header">
-          <h1 class="page-title">Inventaires</h1>
-          <button class="btn btn-primary" onclick="openModal('modal-create')">+ Nouvel inventaire</button>
+          <h1 class="page-title">{{T "inventory.title"}}</h1>
+          <button class="btn btn-primary" onclick="openModal('modal-create')">{{T "btn.new_inventory"}}</button>
         </div>
 
         {{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
@@ -50,12 +27,12 @@
           <table class="table">
             <thead>
               <tr>
-                <th>Nom</th>
-                <th>Source</th>
-                <th>Organisation</th>
-                <th>Hôtes</th>
-                <th>Dernière synchro</th>
-                <th>Actions</th>
+                <th>{{T "col.name"}}</th>
+                <th>{{T "col.source"}}</th>
+                <th>{{T "col.organization"}}</th>
+                <th>{{T "col.hosts"}}</th>
+                <th>{{T "col.last_sync"}}</th>
+                <th>{{T "col.actions"}}</th>
               </tr>
             </thead>
             <tbody>
@@ -74,20 +51,20 @@
                   <div class="actions">
                     {{if ne .Source "manual"}}
                     <form method="POST" action="/inventory/{{.ID}}/sync" style="display:inline">
-                      <button class="btn btn-sm">Sync</button>
+                      <button class="btn btn-sm">{{T "btn.sync"}}</button>
                     </form>
                     {{end}}
-                    <a href="/inventory/{{.ID}}" class="btn btn-sm btn-primary">Gérer</a>
+                    <a href="/inventory/{{.ID}}" class="btn btn-sm btn-primary">{{T "btn.manage"}}</a>
                     {{if .CanDelete}}
-                    <form method="POST" action="/inventory/{{.ID}}/delete" onsubmit="return confirm('Supprimer cet inventaire ?')" style="display:inline">
-                      <button class="btn btn-sm btn-danger">Supprimer</button>
+                    <form method="POST" action="/inventory/{{.ID}}/delete" onsubmit="return confirm('{{T "confirm.delete_inventory"}}')" style="display:inline">
+                      <button class="btn btn-sm btn-danger">{{T "btn.delete"}}</button>
                     </form>
                     {{end}}
                   </div>
                 </td>
               </tr>
               {{else}}
-              <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:32px">Aucun inventaire — créez-en un</td></tr>
+              <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:32px">{{T "inventory.no_items"}}</td></tr>
               {{end}}
             </tbody>
           </table>
@@ -101,108 +78,155 @@
   <div class="modal-overlay" id="modal-create">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Nouvel inventaire</h2>
+        <h2>{{T "btn.new_inventory"}}</h2>
         <button class="modal-close" onclick="closeModal('modal-create')">✕</button>
       </div>
       <form method="POST" action="/inventory">
         <div class="modal-body">
           <div class="form-group">
-            <label>Nom</label>
+            <label>{{T "form.name"}}</label>
             <input type="text" name="name" required>
           </div>
           <div class="form-group">
-            <label>Organisation</label>
+            <label>{{T "form.organization"}}</label>
             <select name="organization_id">
-              <option value="">— Personnel (aucune organisation) —</option>
+              <option value="">{{T "form.personal"}}</option>
               {{range $.Organizations}}
               <option value="{{.ID}}">{{.Name}}</option>
               {{end}}
             </select>
           </div>
           <div class="form-group">
-            <label>Source</label>
+            <label>{{T "col.source"}}</label>
             <select name="source" id="create-source" onchange="setSource('create', this.value)" required>
-              <option value="manual">Manuel</option>
-              <option value="proxmox">Proxmox</option>
-              <option value="ad">ActiveDirectory</option>
-              <option value="ocs">OCSInventory</option>
-              <option value="vcenter">vCenter / ESXi</option>
+              <option value="manual">{{T "inventory.new.source.manual"}}</option>
+              <option value="proxmox">{{T "inventory.new.source.proxmox"}}</option>
+              <option value="ad">{{T "inventory.new.source.ad"}}</option>
+              <option value="ocs">{{T "inventory.new.source.ocs"}}</option>
+              <option value="vcenter">{{T "inventory.new.source.vcenter"}}</option>
             </select>
           </div>
 
           <!-- Proxmox -->
           <div id="create-section-proxmox" class="source-section" style="display:none">
             <div class="form-group">
-              <label>Mode de connexion</label>
+              <label>{{T "inventory.source.conn_mode"}}</label>
               <div style="display:flex;gap:16px;margin-top:4px">
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                  <input type="radio" name="proxmox_auth_mode" value="api" checked onchange="setAuthMode('create', this.value)"> API REST
+                  <input type="radio" name="proxmox_auth_mode" value="api" checked onchange="setAuthMode('create', this.value)"> {{T "inventory.source.api"}}
                 </label>
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                  <input type="radio" name="proxmox_auth_mode" value="ssh" onchange="setAuthMode('create', this.value)"> SSH
+                  <input type="radio" name="proxmox_auth_mode" value="ssh" onchange="setAuthMode('create', this.value)"> {{T "inventory.source.ssh_mode"}}
                 </label>
               </div>
             </div>
             <div id="create-proxmox-api">
               <div class="form-group">
-                <label>URL Proxmox</label>
+                <label>{{T "inventory.source.url"}}</label>
                 <input type="url" name="proxmox_url" placeholder="https://proxmox:8006">
               </div>
               <div class="form-group">
-                <label>Utilisateur</label>
+                <label>{{T "col.user"}}</label>
                 <input type="text" name="proxmox_user" placeholder="root@pam">
               </div>
               <div class="form-group">
-                <label>Mot de passe</label>
+                <label>{{T "form.current_password"}}</label>
                 <input type="password" name="proxmox_password" autocomplete="new-password">
               </div>
               <div class="form-group">
-                <label>Nœud</label>
+                <label>{{T "inventory.source.node"}}</label>
                 <input type="text" name="proxmox_node" placeholder="pve">
               </div>
               <div class="form-group">
                 <label class="checkbox-label">
-                  <input type="checkbox" name="proxmox_insecure"> Ignorer les erreurs TLS (certificat auto-signé)
+                  <input type="checkbox" name="proxmox_insecure"> {{T "inventory.source.ignore_tls"}}
                 </label>
               </div>
             </div>
             <div id="create-proxmox-ssh" style="display:none">
               <div class="form-group">
-                <label>Hôte SSH</label>
+                <label>{{T "inventory.source.ssh_host"}}</label>
                 <input type="text" name="proxmox_ssh_host" placeholder="192.168.1.100">
               </div>
               <div class="form-group">
-                <label>Port SSH</label>
+                <label>{{T "inventory.source.ssh_port"}}</label>
                 <input type="number" name="proxmox_ssh_port" placeholder="22" value="22" min="1" max="65535">
               </div>
               <div class="form-group">
-                <label>Utilisateur SSH</label>
+                <label>{{T "inventory.source.ssh_user"}}</label>
                 <input type="text" name="proxmox_ssh_user" placeholder="root">
               </div>
               <div class="form-group">
-                <label>Mot de passe SSH</label>
+                <label>{{T "inventory.source.ssh_password"}}</label>
                 <input type="password" name="proxmox_ssh_password" autocomplete="new-password">
               </div>
             </div>
             <div class="form-group" style="margin-top:8px">
-              <label>Filtrer par tags <span style="font-size:11px;color:var(--text-muted)">(optionnel, séparés par des virgules)</span></label>
-              <input type="text" name="proxmox_filter_tags" placeholder="production, web">
+              <label>{{T "inventory.source.filter_tags"}} <span style="font-size:11px;color:var(--text-muted)">{{T "inventory.source.filter_hint"}}</span></label>
+              <input type="hidden" id="create-proxmox-tags-hidden" name="proxmox_filter_tags" value="">
+              <div id="create-proxmox-tags-area" style="display:flex;flex-wrap:wrap;gap:6px;min-height:34px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;align-items:center"></div>
+              <div style="display:flex;gap:6px">
+                <input type="text" id="create-proxmox-tag-input" placeholder="production" style="flex:1;font-size:13px" onkeydown="if(event.key==='Enter'){event.preventDefault();proxmoxAddTag('create');}">
+                <button type="button" class="btn btn-sm" onclick="proxmoxAddTag('create')">{{T "btn.add"}}</button>
+              </div>
             </div>
           </div>
 
           <div id="create-section-ad" class="source-section" style="display:none">
-            <p class="text-muted" style="font-size:.875rem">Source ActiveDirectory — à venir.</p>
+            <div class="form-group">
+              <label>{{T "inventory.source.ad.url"}}</label>
+              <input type="text" name="ad_url" placeholder="ldap://dc.example.com">
+            </div>
+            <div class="form-group">
+              <label>{{T "inventory.source.ad.bind_dn"}}</label>
+              <input type="text" name="ad_bind_dn" placeholder="CN=svc,DC=example,DC=com">
+            </div>
+            <div class="form-group">
+              <label>{{T "inventory.source.ad.password"}}</label>
+              <input type="password" name="ad_password" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" name="ad_insecure"> {{T "inventory.source.ignore_tls"}}
+              </label>
+            </div>
+            <div class="form-group">
+              <label>{{T "inventory.source.ad.groups"}}</label>
+              <div class="table-container" style="margin-bottom:8px">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>{{T "col.name"}}</th>
+                      <th>Base DN</th>
+                      <th>{{T "inventory.source.ad.filter_label"}}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="create-ad-groups-tbody">
+                    <tr id="create-ad-empty">
+                      <td colspan="4" style="text-align:center;color:var(--text-muted);padding:12px;font-size:13px">{{T "inventory.source.ad.no_groups"}}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;align-items:center">
+                <input type="text" id="create-ad-name" placeholder="{{T "inventory.source.ad.group_name_ph"}}" style="font-size:13px">
+                <input type="text" id="create-ad-base-dn" placeholder="{{T "inventory.source.ad.group_base_dn_ph"}}" style="font-size:12px;font-family:monospace">
+                <input type="text" id="create-ad-filter" placeholder="{{T "inventory.source.ad.group_filter_ph"}}" style="font-size:12px;font-family:monospace">
+                <button type="button" class="btn btn-sm btn-primary" onclick="addADGroupCreate()">{{T "btn.add"}}</button>
+              </div>
+            </div>
           </div>
           <div id="create-section-ocs" class="source-section" style="display:none">
-            <p class="text-muted" style="font-size:.875rem">Source OCSInventory — à venir.</p>
+            <p class="text-muted" style="font-size:.875rem">{{T "inventory.new.ocs_coming"}}</p>
           </div>
           <div id="create-section-vcenter" class="source-section" style="display:none">
-            <p class="text-muted" style="font-size:.875rem">Source vCenter / ESXi — à venir.</p>
+            <p class="text-muted" style="font-size:.875rem">{{T "inventory.new.vcenter_coming"}}</p>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn" onclick="closeModal('modal-create')">Annuler</button>
-          <button type="submit" class="btn btn-primary">Créer</button>
+          <button type="button" class="btn" onclick="closeModal('modal-create')">{{T "btn.cancel"}}</button>
+          <button type="submit" class="btn btn-primary">{{T "btn.create"}}</button>
         </div>
       </form>
     </div>
@@ -225,6 +249,61 @@
     function setAuthMode(prefix, mode) {
       document.getElementById(prefix + '-proxmox-api').style.display = mode === 'api' ? '' : 'none';
       document.getElementById(prefix + '-proxmox-ssh').style.display = mode === 'ssh' ? '' : 'none';
+    }
+
+    function esc(str) {
+      return String(str).replace(/[&<>"']/g, c =>
+        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function proxmoxRenderTags(prefix) {
+      const hidden = document.getElementById(prefix + '-proxmox-tags-hidden');
+      const area   = document.getElementById(prefix + '-proxmox-tags-area');
+      if (!hidden || !area) return;
+      area.innerHTML = '';
+      hidden.value.split(',').map(t => t.trim()).filter(t => t).forEach(tag => {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:var(--accent-dim,rgba(79,110,247,.12));color:var(--accent,#4f6ef7);padding:3px 10px;border-radius:99px;font-size:12px;font-weight:500';
+        chip.innerHTML = esc(tag) + ' <button type="button" data-tag="' + esc(tag) + '" style="background:none;border:none;cursor:pointer;padding:0;font-size:14px;color:inherit;line-height:1;margin-left:2px" onclick="proxmoxRemoveTag(\'create\',this)">×</button>';
+        area.appendChild(chip);
+      });
+    }
+    function proxmoxAddTag(prefix) {
+      const input = document.getElementById(prefix + '-proxmox-tag-input');
+      const tag   = input.value.trim();
+      if (!tag) return;
+      const hidden = document.getElementById(prefix + '-proxmox-tags-hidden');
+      const tags   = hidden.value ? hidden.value.split(',').map(t => t.trim()).filter(t => t) : [];
+      if (!tags.includes(tag)) { tags.push(tag); hidden.value = tags.join(','); proxmoxRenderTags(prefix); }
+      input.value = '';
+    }
+    function proxmoxRemoveTag(prefix, btn) {
+      const tag    = btn.dataset.tag;
+      const hidden = document.getElementById(prefix + '-proxmox-tags-hidden');
+      const tags   = hidden.value.split(',').map(t => t.trim()).filter(t => t && t !== tag);
+      hidden.value = tags.join(',');
+      proxmoxRenderTags(prefix);
+    }
+
+    function addADGroupCreate() {
+      const name   = document.getElementById('create-ad-name').value.trim();
+      const baseDN = document.getElementById('create-ad-base-dn').value.trim();
+      const filter = document.getElementById('create-ad-filter').value.trim();
+      if (!name) return;
+      const tbody = document.getElementById('create-ad-groups-tbody');
+      const empty = document.getElementById('create-ad-empty');
+      if (empty) empty.remove();
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${esc(name)}<input type="hidden" name="ad_group_name" value="${esc(name)}"></td>
+        <td style="font-family:monospace;font-size:12px">${esc(baseDN)}<input type="hidden" name="ad_group_base_dn" value="${esc(baseDN)}"></td>
+        <td style="font-family:monospace;font-size:12px;color:var(--text-muted)">${filter ? esc(filter) : '—'}<input type="hidden" name="ad_group_filter" value="${esc(filter)}"></td>
+        <td><button type="button" class="btn btn-sm btn-danger" onclick="this.closest('tr').remove()" style="padding:4px 8px">✕</button></td>
+      `;
+      tbody.appendChild(tr);
+      document.getElementById('create-ad-name').value = '';
+      document.getElementById('create-ad-base-dn').value = '';
+      document.getElementById('create-ad-filter').value = '';
     }
   </script>
 </body>

@@ -4,47 +4,24 @@
   <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gomme — Admin — Paramètres</title>
+  <title>Gomme — {{T "admin.sidebar.title"}} — {{T "admin.settings.title"}}</title>
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
   <div class="app-layout">
 
-    <nav class="navbar">
-      <span class="nav-brand">Gomme</span>
-      <div class="nav-links">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/inventory/list">Inventaire</a>
-        <a href="/repository">Repositories</a>
-        <a href="/playbooks">Playbooks</a>
-        <a href="/tasks">Tâches</a>
-        <a href="/history">Historique</a>
-        <a href="/organizations">Organisations</a>
-        <a href="/credentials">Identifiants</a>
-      </div>
-      <div class="nav-user">
-        <details class="nav-dropdown">
-          <summary>{{.User.Username}}</summary>
-          <div class="nav-dropdown-menu">
-            <a href="/profile">Profil</a>
-            {{if .User.IsAdmin}}<a href="/admin/users">Administration</a>{{end}}
-            <div class="dropdown-sep"></div>
-            <a href="/logout" class="dropdown-danger">Déconnexion</a>
-          </div>
-        </details>
-      </div>
-    </nav>
+    {{template "navbar" .}}
 
     <div class="content-layout" style="overflow-y:auto;">
 
       <aside class="sidebar">
         <div class="sidebar-section">
-          <h3>Administration</h3>
+          <h3>{{T "admin.sidebar.title"}}</h3>
           <div style="display:flex;flex-direction:column;gap:4px">
-            <a href="/admin/users" style="color:var(--text-muted);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px">Utilisateurs</a>
-            <a href="/admin/playbooks" style="color:var(--text-muted);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px">Exécutions</a>
-            <a href="/admin/images" style="color:var(--text-muted);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px">Images</a>
-            <a href="/admin/settings" style="color:var(--text);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px;background:var(--bg-3)">Paramètres</a>
+            <a href="/admin/users" style="color:var(--text-muted);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px">{{T "admin.sidebar.users"}}</a>
+            <a href="/admin/playbooks" style="color:var(--text-muted);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px">{{T "admin.sidebar.runs"}}</a>
+            <a href="/admin/images" style="color:var(--text-muted);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px">{{T "admin.sidebar.images"}}</a>
+            <a href="/admin/settings" style="color:var(--text);font-size:13px;text-decoration:none;padding:4px 8px;border-radius:4px;background:var(--bg-3)">{{T "admin.sidebar.settings"}}</a>
           </div>
         </div>
       </aside>
@@ -52,24 +29,24 @@
       <div class="page-content" style="max-width:640px">
 
         <div class="page-header">
-          <h1 class="page-title">Paramètres généraux</h1>
+          <h1 class="page-title">{{T "admin.settings.title"}}</h1>
         </div>
 
         {{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
 
         <form method="POST" action="/admin/settings">
           <div class="section">
-            <div class="section-header">Synchronisation</div>
+            <div class="section-header">{{T "admin.settings.sync.title"}}</div>
             <div class="modal-body">
               <div class="form-group">
-                <label>Intervalle de sync automatique (minutes)</label>
+                <label>{{T "admin.settings.sync.label"}}</label>
                 <input type="number" name="sync_interval" value="{{index .Settings "sync_interval"}}" placeholder="30" min="1">
               </div>
             </div>
           </div>
 
           <div style="display:flex;justify-content:flex-end;margin-top:16px">
-            <button type="submit" class="btn btn-primary">Enregistrer</button>
+            <button type="submit" class="btn btn-primary">{{T "btn.save"}}</button>
           </div>
         </form>
 

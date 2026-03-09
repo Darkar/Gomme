@@ -6,6 +6,7 @@ import (
 	"gomme/db"
 	"gomme/docker"
 	"gomme/handlers"
+	"gomme/i18n"
 	authmw "gomme/middleware"
 	"gomme/models"
 	"gomme/scheduler"
@@ -33,11 +34,23 @@ type TemplateRenderer struct {
 }
 
 func (t *TemplateRenderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return t.templates.ExecuteTemplate(w, name, data)
+	lang, _ := c.Get("lang").(string)
+	if lang == "" {
+		lang = "en"
+	}
+	clone, err := t.templates.Clone()
+	if err != nil {
+		return err
+	}
+	clone.Funcs(template.FuncMap{
+		"T": i18n.GetTranslator(lang),
+	})
+	return clone.ExecuteTemplate(w, name, data)
 }
 
 func loadTemplates() (*template.Template, error) {
 	root := template.New("").Funcs(template.FuncMap{
+		"T":    func(key string) string { return key }, // placeholder, replaced per-render
 		"prev": func(n int) int { return n - 1 },
 		"next": func(n int) int { return n + 1 },
 		"splitOpts": func(opts string) [][2]string {
@@ -76,6 +89,8 @@ func loadTemplates() (*template.Template, error) {
 func main() {
 	cfg := config.Load()
 
+	i18n.Load("locales")
+
 	database, err := db.Init(cfg.DSN)
 	if err != nil {
 		log.Fatalf("Erreur DB: %v", err)
@@ -105,6 +120,7 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(session.Middleware(sessions.NewCookieStore([]byte(cfg.SecretKey))))
+	e.Use(authmw.LangMiddleware())
 
 	e.Static("/static", "static")
 
@@ -120,13 +136,14 @@ func main() {
 	e.POST("/login", h.LoginPost)
 	e.GET("/logout", h.Logout)
 
-	auth := e.Group("", authmw.RequireAuth(database))
+	auth := e.Group("", authmw.RequireAuth(database), authmw.LangMiddleware())
 
 	auth.GET("/change-password", h.ChangePassword)
 	auth.POST("/change-password", h.ChangePasswordPost)
 
 	auth.GET("/profile", h.Profile)
 	auth.POST("/profile/password", h.ProfilePasswordPost)
+	auth.POST("/profile/language", h.ProfileLanguagePost)
 
 	auth.GET("/dashboard", h.Dashboard)
 	auth.GET("/history", h.History)

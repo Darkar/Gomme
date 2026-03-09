@@ -4,46 +4,23 @@
   <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gomme — Variables — {{.Playbook.Name}}</title>
+  <title>Gomme — {{T "playbooks.vars.title"}} — {{.Playbook.Name}}</title>
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
   <div class="app-layout">
 
-    <nav class="navbar">
-      <span class="nav-brand">Gomme</span>
-      <div class="nav-links">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/inventory/list">Inventaire</a>
-        <a href="/repository">Repositories</a>
-        <a href="/playbooks" class="active">Playbooks</a>
-        <a href="/tasks">Tâches</a>
-        <a href="/history">Historique</a>
-        <a href="/organizations">Organisations</a>
-        <a href="/credentials">Identifiants</a>
-      </div>
-      <div class="nav-user">
-        <details class="nav-dropdown">
-          <summary>{{.User.Username}}</summary>
-          <div class="nav-dropdown-menu">
-            <a href="/profile">Profil</a>
-            {{if .User.IsAdmin}}<a href="/admin/users">Administration</a>{{end}}
-            <div class="dropdown-sep"></div>
-            <a href="/logout" class="dropdown-danger">Déconnexion</a>
-          </div>
-        </details>
-      </div>
-    </nav>
+    {{template "navbar" .}}
 
     <div class="content-layout" style="overflow-y:auto;">
       <div class="page-content" style="max-width:860px">
 
         <div class="page-header">
-          <h1 class="page-title">Variables — {{.Playbook.Name}}</h1>
+          <h1 class="page-title">{{T "playbooks.vars.title"}} — {{.Playbook.Name}}</h1>
           <div style="display:flex;gap:8px;">
-            <a href="/playbooks/{{.Playbook.ID}}/survey" class="btn">Survey</a>
-            <a href="/playbooks/{{.Playbook.ID}}" class="btn">Lancer</a>
-            <a href="/playbooks" class="btn">← Retour</a>
+            <a href="/playbooks/{{.Playbook.ID}}/survey" class="btn">{{T "playbooks.edit.tab.survey"}}</a>
+            <a href="/playbooks/{{.Playbook.ID}}" class="btn">{{T "playbooks.run.launch"}}</a>
+            <a href="/playbooks" class="btn">{{T "btn.back_playbooks"}}</a>
           </div>
         </div>
 
@@ -53,14 +30,14 @@
         <form method="POST" action="/playbooks/{{.Playbook.ID}}/vars">
           <div class="section">
             <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
-              <span>Variables extra-vars / Credentials</span>
-              <button type="button" class="btn btn-sm" onclick="addRow()">+ Ajouter</button>
+              <span>{{T "playbooks.edit.vars.title"}}</span>
+              <button type="button" class="btn btn-sm" onclick="addRow()">{{T "btn.add_variable"}}</button>
             </div>
             <div class="section-body">
               <div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;margin-bottom:8px">
-                <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">Clé</span>
-                <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">Valeur</span>
-                <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">Chiffré</span>
+                <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">{{T "playbooks.edit.vars.key"}}</span>
+                <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">{{T "playbooks.edit.vars.value"}}</span>
+                <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted)">{{T "playbooks.vars.encrypted"}}</span>
                 <span></span>
               </div>
               <div id="vars-list">
@@ -69,7 +46,7 @@
                   <input type="text" name="key" value="{{.Key}}" placeholder="ma_variable">
                   <input type="{{if .Encrypted}}password{{else}}text{{end}}" name="value" value="{{if .Encrypted}}••••••••{{else}}{{.Value}}{{end}}" placeholder="valeur">
                   <label class="form-check">
-                    <input type="checkbox" name="encrypted" {{if .Encrypted}}checked{{end}}> Chiffrer
+                    <input type="checkbox" name="encrypted" {{if .Encrypted}}checked{{end}}> {{T "playbooks.vars.encrypt"}}
                   </label>
                   <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.var-row').remove()">✕</button>
                 </div>
@@ -79,8 +56,8 @@
           </div>
 
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
-            <a href="/playbooks" class="btn">Annuler</a>
-            <button type="submit" class="btn btn-primary">Enregistrer</button>
+            <a href="/playbooks" class="btn">{{T "btn.cancel"}}</a>
+            <button type="submit" class="btn btn-primary">{{T "btn.save"}}</button>
           </div>
         </form>
 
@@ -89,13 +66,14 @@
   </div>
 
   <script>
+    const labelEncrypt = '{{T "playbooks.vars.encrypt"}}';
     function addRow() {
       const div = document.createElement('div');
       div.className = 'var-row';
       div.innerHTML = `
         <input type="text" name="key" placeholder="ma_variable">
         <input type="text" name="value" placeholder="valeur">
-        <label class="form-check"><input type="checkbox" name="encrypted"> Chiffrer</label>
+        <label class="form-check"><input type="checkbox" name="encrypted"> ${labelEncrypt}</label>
         <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.var-row').remove()">✕</button>
       `;
       document.getElementById('vars-list').appendChild(div);

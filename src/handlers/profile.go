@@ -58,3 +58,12 @@ func (h *Handler) ProfilePasswordPost(c echo.Context) error {
 	return redirect("success", "Mot+de+passe+mis+à+jour")
 }
 
+func (h *Handler) ProfileLanguagePost(c echo.Context) error {
+	user := c.Get("user").(*models.User)
+	lang := c.FormValue("language")
+	if lang != "fr" && lang != "en" {
+		lang = "en"
+	}
+	h.DB.Model(user).Update("language", lang)
+	return c.Redirect(http.StatusFound, "/profile?success=Langue+mise+à+jour")
+}

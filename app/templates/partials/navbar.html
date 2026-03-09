@@ -1,0 +1,35 @@
+{{define "navbar"}}
+    <nav class="navbar">
+      <span class="nav-brand">Gomme</span>
+      <div class="nav-links">
+        <a href="/dashboard">{{T "nav.dashboard"}}</a>
+        <a href="/playbooks">{{T "nav.playbooks"}}</a>
+        <a href="/inventory/list">{{T "nav.inventory"}}</a>
+        <a href="/credentials">{{T "nav.credentials"}}</a>
+        <a href="/organizations">{{T "nav.organizations"}}</a>
+        <a href="/repository">{{T "nav.repositories"}}</a>
+        <a href="/tasks">{{T "nav.tasks"}}</a>
+        <a href="/history">{{T "nav.history"}}</a>
+      </div>
+      <div class="nav-user">
+        <details class="nav-dropdown">
+          <summary>{{.User.Username}}</summary>
+          <div class="nav-dropdown-menu">
+            <a href="/profile">{{T "nav.profile"}}</a>
+            {{if .User.IsAdmin}}<a href="/admin/users">{{T "nav.admin"}}</a>{{end}}
+            <div class="dropdown-sep"></div>
+            <a href="/logout" class="dropdown-danger">{{T "nav.logout"}}</a>
+          </div>
+        </details>
+      </div>
+    </nav>
+    <script>
+      (function(){
+        var seg = location.pathname.split('/')[1];
+        document.querySelectorAll('.nav-links a').forEach(function(a){
+          var ls = new URL(a.href).pathname.split('/')[1];
+          if (ls && ls === seg) a.classList.add('active');
+        });
+      })();
+    </script>
+{{end}}

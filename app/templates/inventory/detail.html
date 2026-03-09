@@ -10,76 +10,51 @@
 <body>
   <div class="app-layout">
 
-    <nav class="navbar">
-      <span class="nav-brand">Gomme</span>
-      <div class="nav-links">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/inventory/list" class="active">Inventaire</a>
-        <a href="/repository">Repositories</a>
-        <a href="/playbooks">Playbooks</a>
-        <a href="/tasks">Tâches</a>
-        <a href="/history">Historique</a>
-        <a href="/organizations">Organisations</a>
-        <a href="/credentials">Identifiants</a>
-      </div>
-      <div class="nav-user">
-        <details class="nav-dropdown">
-          <summary>{{.User.Username}}</summary>
-          <div class="nav-dropdown-menu">
-            <a href="/profile">Profil</a>
-            {{if .User.IsAdmin}}<a href="/admin/users">Administration</a>{{end}}
-            <div class="dropdown-sep"></div>
-            <a href="/logout" class="dropdown-danger">Déconnexion</a>
-          </div>
-        </details>
-      </div>
-    </nav>
+    {{template "navbar" .}}
 
     <div class="content-layout" style="flex-direction:column;overflow:hidden;" id="content-layout">
 
-      <!-- En-tête et onglets toujours visibles -->
       <div style="padding:24px 24px 0;flex-shrink:0">
         {{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
         {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
 
         <div class="page-header">
           <div>
-            <a href="/inventory/list" style="font-size:13px;color:var(--text-muted);text-decoration:none">← Inventaires</a>
+            <a href="/inventory/list" style="font-size:13px;color:var(--text-muted);text-decoration:none">{{T "btn.back_inventories"}}</a>
             <h1 class="page-title" style="margin-top:4px">{{.Inventory.Name}}</h1>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <span class="badge badge-host">{{.Inventory.Source}}</span>
             {{if not .IsManual}}
-            <button class="btn btn-sm" id="btn-sync" onclick="syncInventory()">↻ Synchroniser</button>
+            <button class="btn btn-sm" id="btn-sync" onclick="syncInventory()">{{T "inventory.sync"}}</button>
             {{end}}
           </div>
         </div>
 
-        <!-- ── Onglets ── -->
         <div class="edit-tabs">
-          <button class="tab-btn" data-tab="groups">Groupes</button>
-          <button class="tab-btn" data-tab="hosts">Hôtes</button>
-          <button class="tab-btn" data-tab="vars">Variables</button>
-          <button class="tab-btn" data-tab="graph">Graphe</button>
-          {{if not .IsManual}}<button class="tab-btn" data-tab="source">Source</button>{{end}}
+          <button class="tab-btn" data-tab="groups">{{T "inventory.tab.groups"}}</button>
+          <button class="tab-btn" data-tab="hosts">{{T "inventory.tab.hosts"}}</button>
+          <button class="tab-btn" data-tab="vars">{{T "inventory.tab.vars"}}</button>
+          <button class="tab-btn" data-tab="graph">{{T "inventory.tab.graph"}}</button>
+          {{if not .IsManual}}<button class="tab-btn" data-tab="source">{{T "inventory.tab.source"}}</button>{{end}}
         </div>
       </div>
 
       <div class="page-content" id="page-main" style="flex:1;overflow-y:auto;padding-top:16px">
 
-        <!-- ══════════════ Onglet Groupes ══════════════ -->
+        <!-- ══ Groupes ══ -->
         <div class="tab-panel" id="tab-groups">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <h2 style="font-size:16px;font-weight:600;margin:0">Groupes</h2>
-            {{if .IsManual}}<button class="btn btn-sm btn-primary" onclick="openModal('modal-add-group')">+ Groupe</button>{{end}}
+            <h2 style="font-size:16px;font-weight:600;margin:0">{{T "inventory.groups.title"}}</h2>
+            {{if .IsManual}}<button class="btn btn-sm btn-primary" onclick="openModal('modal-add-group')">{{T "btn.add_group"}}</button>{{end}}
           </div>
           <div class="table-container">
             <table class="table">
               <thead>
                 <tr>
-                  <th>Nom</th>
-                  <th>Hôtes</th>
-                  {{if .IsManual}}<th>Actions</th>{{end}}
+                  <th>{{T "col.name"}}</th>
+                  <th>{{T "col.hosts"}}</th>
+                  {{if .IsManual}}<th>{{T "col.actions"}}</th>{{end}}
                 </tr>
               </thead>
               <tbody>
@@ -91,9 +66,9 @@
                   <td>
                     <div class="actions">
                       <form method="POST" action="/inventory/{{$.Inventory.ID}}/groups/{{.ID}}/delete"
-                        onsubmit="return confirm('Supprimer le groupe «\u00a0{{.Name}}\u00a0» ?')"
+                        onsubmit="return confirm('{{T "confirm.delete_group"}}')"
                         style="display:inline">
-                        <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+                        <button type="submit" class="btn btn-sm btn-danger">{{T "btn.delete"}}</button>
                       </form>
                     </div>
                   </td>
@@ -102,7 +77,7 @@
                 {{else}}
                 <tr>
                   <td colspan="3" style="text-align:center;color:var(--text-muted);padding:24px">
-                    {{if .IsManual}}Aucun groupe — créez-en un pour organiser vos hôtes.{{else}}Aucun groupe — synchronisez l'inventaire.{{end}}
+                    {{if .IsManual}}{{T "inventory.groups.no_items_manual"}}{{else}}{{T "inventory.groups.no_items_sync"}}{{end}}
                   </td>
                 </tr>
                 {{end}}
@@ -111,21 +86,21 @@
           </div>
         </div>
 
-        <!-- ══════════════ Onglet Hôtes ══════════════ -->
+        <!-- ══ Hôtes ══ -->
         <div class="tab-panel" id="tab-hosts">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <h2 style="font-size:16px;font-weight:600;margin:0">Hôtes</h2>
-            {{if .IsManual}}<button class="btn btn-sm btn-primary" onclick="openModal('modal-add-host')">+ Hôte</button>{{end}}
+            <h2 style="font-size:16px;font-weight:600;margin:0">{{T "inventory.hosts.title"}}</h2>
+            {{if .IsManual}}<button class="btn btn-sm btn-primary" onclick="openModal('modal-add-host')">{{T "btn.add_host"}}</button>{{end}}
           </div>
           <div class="table-container">
             <table class="table">
               <thead>
                 <tr>
-                  <th>Nom</th>
-                  <th>IP / Adresse</th>
-                  <th>Description</th>
-                  <th>Groupes</th>
-                  {{if .IsManual}}<th>Actions</th>{{end}}
+                  <th>{{T "col.name"}}</th>
+                  <th>{{T "inventory.hosts.col.ip"}}</th>
+                  <th>{{T "inventory.hosts.col.description"}}</th>
+                  <th>{{T "inventory.hosts.col.groups"}}</th>
+                  {{if .IsManual}}<th>{{T "col.actions"}}</th>{{end}}
                 </tr>
               </thead>
               <tbody>
@@ -140,11 +115,11 @@
                   {{if $.IsManual}}
                   <td>
                     <div class="actions">
-                      <button type="button" class="btn btn-sm" onclick="openEditHost({{.ID}})">Modifier</button>
+                      <button type="button" class="btn btn-sm" onclick="openEditHost({{.ID}})">{{T "btn.edit"}}</button>
                       <form method="POST" action="/inventory/{{$.Inventory.ID}}/hosts/{{.ID}}/delete"
-                        onsubmit="return confirm('Supprimer l\u0027hôte «\u00a0{{.Name}}\u00a0» ?')"
+                        onsubmit="return confirm('{{T "confirm.delete_member"}}')"
                         style="display:inline">
-                        <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+                        <button type="submit" class="btn btn-sm btn-danger">{{T "btn.delete"}}</button>
                       </form>
                     </div>
                   </td>
@@ -153,7 +128,7 @@
                 {{else}}
                 <tr>
                   <td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">
-                    {{if .IsManual}}Aucun hôte — ajoutez-en un avec le bouton « + Hôte ».{{else}}Aucun hôte — synchronisez l'inventaire.{{end}}
+                    {{if .IsManual}}{{T "inventory.hosts.no_items_manual"}}{{else}}{{T "inventory.hosts.no_items_sync"}}{{end}}
                   </td>
                 </tr>
                 {{end}}
@@ -162,122 +137,176 @@
           </div>
         </div>
 
-        <!-- ══════════════ Onglet Source (non-manuel) ══════════════ -->
+        <!-- ══ Source ══ -->
         {{if not .IsManual}}
         <div class="tab-panel" id="tab-source">
           <form method="POST" action="/inventory/{{.Inventory.ID}}/edit">
             <input type="hidden" name="source" value="{{.Inventory.Source}}">
             <div class="section">
-              <div class="section-header">Configuration de la source — {{.Inventory.Source}}</div>
+              <div class="section-header">{{T "inventory.source.config"}} — {{.Inventory.Source}}</div>
               <div class="modal-body">
                 <div class="form-group">
-                  <label>Nom</label>
+                  <label>{{T "form.name"}}</label>
                   <input type="text" name="name" value="{{.Inventory.Name}}" required>
                 </div>
                 <div class="form-group">
-                  <label>Organisation</label>
+                  <label>{{T "form.organization"}}</label>
                   <select name="organization_id">
-                    <option value="">— Personnel —</option>
+                    <option value="">{{T "inventory.source.personal"}}</option>
                     {{range .Organizations}}
                     <option value="{{.ID}}" {{if eq .ID $.OrganizationIDVal}}selected{{end}}>{{.Name}}</option>
                     {{end}}
                   </select>
                 </div>
 
+                {{if eq .Inventory.Source "ad"}}
+                <div class="form-group">
+                  <label>{{T "inventory.source.ad.url"}}</label>
+                  <input type="text" name="ad_url" value="{{.ParsedSource.ParsedADURL}}" placeholder="ldap://dc.example.com">
+                </div>
+                <div class="form-group">
+                  <label>{{T "inventory.source.ad.bind_dn"}}</label>
+                  <input type="text" name="ad_bind_dn" value="{{.ParsedSource.ParsedADBindDN}}" placeholder="CN=svc,DC=example,DC=com">
+                </div>
+                <div class="form-group">
+                  <label>{{T "inventory.source.ad.password"}}</label>
+                  <input type="password" name="ad_password" autocomplete="new-password" placeholder="{{T "inventory.source.leave_blank"}}">
+                </div>
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" name="ad_insecure" {{if .ParsedSource.ParsedADInsecure}}checked{{end}}> {{T "inventory.source.ignore_tls"}}
+                  </label>
+                </div>
+                <div class="form-group">
+                  <label>{{T "inventory.source.ad.groups"}}</label>
+                  <div class="table-container" style="margin-bottom:8px">
+                    <table class="table">
+                      <thead>
+                        <tr>
+                          <th>{{T "col.name"}}</th>
+                          <th>Base DN</th>
+                          <th>{{T "inventory.source.ad.filter_label"}}</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody id="src-ad-groups-tbody">
+                        {{range .ParsedSource.ParsedADGroups}}
+                        <tr>
+                          <td>{{.Name}}<input type="hidden" name="ad_group_name" value="{{.Name}}"></td>
+                          <td style="font-family:monospace;font-size:12px">{{.BaseDN}}<input type="hidden" name="ad_group_base_dn" value="{{.BaseDN}}"></td>
+                          <td style="font-family:monospace;font-size:12px;color:var(--text-muted)">{{if .Filter}}{{.Filter}}{{else}}—{{end}}<input type="hidden" name="ad_group_filter" value="{{.Filter}}"></td>
+                          <td><button type="button" class="btn btn-sm btn-danger" onclick="this.closest('tr').remove()">{{T "btn.delete"}}</button></td>
+                        </tr>
+                        {{else}}
+                        <tr id="src-ad-groups-empty">
+                          <td colspan="4" style="text-align:center;color:var(--text-muted);padding:16px">{{T "inventory.source.ad.no_groups"}}</td>
+                        </tr>
+                        {{end}}
+                      </tbody>
+                    </table>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-primary" onclick="openModal('modal-add-ad-group')">{{T "inventory.source.ad.add_group"}}</button>
+                </div>
+                {{end}}
                 {{if eq .Inventory.Source "proxmox"}}
                 <div class="form-group">
-                  <label>Mode de connexion</label>
+                  <label>{{T "inventory.source.conn_mode"}}</label>
                   <div style="display:flex;gap:16px;margin-top:4px">
                     <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                      <input type="radio" name="proxmox_auth_mode" value="api" id="src-auth-api" onchange="setSourceAuthMode(this.value)" {{if ne .ParsedSource.ParsedAuthMode "ssh"}}checked{{end}}> API REST
+                      <input type="radio" name="proxmox_auth_mode" value="api" id="src-auth-api" onchange="setSourceAuthMode(this.value)" {{if ne .ParsedSource.ParsedAuthMode "ssh"}}checked{{end}}> {{T "inventory.source.api"}}
                     </label>
                     <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                      <input type="radio" name="proxmox_auth_mode" value="ssh" id="src-auth-ssh" onchange="setSourceAuthMode(this.value)" {{if eq .ParsedSource.ParsedAuthMode "ssh"}}checked{{end}}> SSH
+                      <input type="radio" name="proxmox_auth_mode" value="ssh" id="src-auth-ssh" onchange="setSourceAuthMode(this.value)" {{if eq .ParsedSource.ParsedAuthMode "ssh"}}checked{{end}}> {{T "inventory.source.ssh_mode"}}
                     </label>
                   </div>
                 </div>
                 <div id="src-proxmox-api" {{if eq .ParsedSource.ParsedAuthMode "ssh"}}style="display:none"{{end}}>
                   <div class="form-group">
-                    <label>URL Proxmox</label>
+                    <label>{{T "inventory.source.url"}}</label>
                     <input type="url" name="proxmox_url" value="{{.ParsedSource.ParsedURL}}" placeholder="https://proxmox:8006">
                   </div>
                   <div class="form-group">
-                    <label>Nœud</label>
+                    <label>{{T "inventory.source.node"}}</label>
                     <input type="text" name="proxmox_node" value="{{.ParsedSource.ParsedNode}}" placeholder="pve">
                   </div>
                   <div class="form-group">
-                    <label>Authentification</label>
+                    <label>{{T "inventory.source.auth"}}</label>
                     <div style="display:flex;gap:16px;margin-top:4px">
                       <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                        <input type="radio" name="proxmox_api_sub_mode" value="password" id="src-api-password-radio" onchange="setAPISubMode(this.value)" {{if eq .ParsedSource.ParsedAPITokenID ""}}checked{{end}}> Compte
+                        <input type="radio" name="proxmox_api_sub_mode" value="password" id="src-api-password-radio" onchange="setAPISubMode(this.value)" {{if eq .ParsedSource.ParsedAPITokenID ""}}checked{{end}}> {{T "inventory.source.account"}}
                       </label>
                       <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                        <input type="radio" name="proxmox_api_sub_mode" value="token" id="src-api-token-radio" onchange="setAPISubMode(this.value)" {{if ne .ParsedSource.ParsedAPITokenID ""}}checked{{end}}> Token API
+                        <input type="radio" name="proxmox_api_sub_mode" value="token" id="src-api-token-radio" onchange="setAPISubMode(this.value)" {{if ne .ParsedSource.ParsedAPITokenID ""}}checked{{end}}> {{T "inventory.source.token"}}
                       </label>
                     </div>
                   </div>
                   <div id="src-api-password" {{if ne .ParsedSource.ParsedAPITokenID ""}}style="display:none"{{end}}>
                     <div class="form-group">
-                      <label>Utilisateur</label>
+                      <label>{{T "col.user"}}</label>
                       <input type="text" name="proxmox_user" value="{{.ParsedSource.ParsedUser}}" placeholder="root@pam">
                     </div>
                     <div class="form-group">
-                      <label>Mot de passe</label>
-                      <input type="password" name="proxmox_password" autocomplete="new-password" placeholder="Laisser vide pour conserver">
+                      <label>{{T "form.current_password"}}</label>
+                      <input type="password" name="proxmox_password" autocomplete="new-password" placeholder="{{T "inventory.source.leave_blank"}}">
                     </div>
                   </div>
                   <div id="src-api-token" {{if eq .ParsedSource.ParsedAPITokenID ""}}style="display:none"{{end}}>
                     <div class="form-group">
-                      <label>Token ID <span style="font-size:11px;color:var(--text-muted)">ex: root@pam!mytoken</span></label>
+                      <label>{{T "inventory.source.token_id"}} <span style="font-size:11px;color:var(--text-muted)">ex: root@pam!mytoken</span></label>
                       <input type="text" name="proxmox_api_token_id" value="{{.ParsedSource.ParsedAPITokenID}}" placeholder="root@pam!mytoken">
                     </div>
                     <div class="form-group">
-                      <label>Secret du token</label>
-                      <input type="password" name="proxmox_api_token_secret" autocomplete="new-password" placeholder="Laisser vide pour conserver">
+                      <label>{{T "inventory.source.token_secret"}}</label>
+                      <input type="password" name="proxmox_api_token_secret" autocomplete="new-password" placeholder="{{T "inventory.source.leave_blank"}}">
                     </div>
                   </div>
                   <div class="form-group">
                     <label class="checkbox-label">
-                      <input type="checkbox" name="proxmox_insecure" {{if .ParsedSource.ParsedInsecure}}checked{{end}}> Ignorer les erreurs TLS
+                      <input type="checkbox" name="proxmox_insecure" {{if .ParsedSource.ParsedInsecure}}checked{{end}}> {{T "inventory.source.ignore_tls"}}
                     </label>
                   </div>
                 </div>
                 <div id="src-proxmox-ssh" {{if ne .ParsedSource.ParsedAuthMode "ssh"}}style="display:none"{{end}}>
                   <div class="form-group">
-                    <label>Hôte SSH</label>
+                    <label>{{T "inventory.source.ssh_host"}}</label>
                     <input type="text" name="proxmox_ssh_host" value="{{.ParsedSource.ParsedSSHHost}}" placeholder="192.168.1.100">
                   </div>
                   <div class="form-group">
-                    <label>Port SSH</label>
+                    <label>{{T "inventory.source.ssh_port"}}</label>
                     <input type="number" name="proxmox_ssh_port" value="{{.ParsedSource.ParsedSSHPort}}" placeholder="22" min="1" max="65535">
                   </div>
                   <div class="form-group">
-                    <label>Utilisateur SSH</label>
+                    <label>{{T "inventory.source.ssh_user"}}</label>
                     <input type="text" name="proxmox_ssh_user" value="{{.ParsedSource.ParsedSSHUser}}" placeholder="root">
                   </div>
                   <div class="form-group">
-                    <label>Mot de passe SSH</label>
-                    <input type="password" name="proxmox_ssh_password" autocomplete="new-password" placeholder="Laisser vide pour conserver">
+                    <label>{{T "inventory.source.ssh_password"}}</label>
+                    <input type="password" name="proxmox_ssh_password" autocomplete="new-password" placeholder="{{T "inventory.source.leave_blank"}}">
                   </div>
                 </div>
                 <div class="form-group" style="margin-top:8px">
-                  <label>Filtrer par tags <span style="font-size:11px;color:var(--text-muted)">(optionnel)</span></label>
-                  <input type="text" name="proxmox_filter_tags" value="{{.ParsedSource.ParsedFilterTags}}" placeholder="production, web">
+                  <label>{{T "inventory.source.filter_tags"}} <span style="font-size:11px;color:var(--text-muted)">{{T "inventory.source.filter_hint"}}</span></label>
+                  <input type="hidden" id="src-proxmox-tags-hidden" name="proxmox_filter_tags" value="{{.ParsedSource.ParsedFilterTags}}">
+                  <div id="src-proxmox-tags-area" style="display:flex;flex-wrap:wrap;gap:6px;min-height:34px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;align-items:center"></div>
+                  <div style="display:flex;gap:6px">
+                    <input type="text" id="src-proxmox-tag-input" placeholder="production" style="flex:1;font-size:13px" onkeydown="if(event.key==='Enter'){event.preventDefault();proxmoxAddTag('src');}">
+                    <button type="button" class="btn btn-sm" onclick="proxmoxAddTag('src')">{{T "btn.add"}}</button>
+                  </div>
                 </div>
                 {{end}}
               </div>
             </div>
             <div style="display:flex;justify-content:flex-end;margin-top:16px">
-              <button type="submit" class="btn btn-primary">Enregistrer</button>
+              <button type="submit" class="btn btn-primary">{{T "btn.save"}}</button>
             </div>
           </form>
         </div>
         {{end}}
 
-        <!-- ══════════════ Onglet Variables ══════════════ -->
+        <!-- ══ Variables ══ -->
         <div class="tab-panel" id="tab-vars">
           <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
-            Ces variables sont injectées dans la section <code>[all:vars]</code> du fichier d'inventaire Ansible et s'appliquent à tous les hôtes.
+            {{T "inventory.vars.info"}}
           </div>
           <form method="POST" action="/inventory/{{.Inventory.ID}}/vars">
             <div id="vars-rows">
@@ -290,65 +319,64 @@
               {{else}}
               {{end}}
             </div>
-            <button type="button" class="btn btn-sm" onclick="addVarRow()" style="margin-bottom:16px">+ Ajouter une variable</button>
+            <button type="button" class="btn btn-sm" onclick="addVarRow()" style="margin-bottom:16px">{{T "inventory.vars.add"}}</button>
             <div style="display:flex;justify-content:flex-end">
-              <button type="submit" class="btn btn-primary">Enregistrer</button>
+              <button type="submit" class="btn btn-primary">{{T "btn.save"}}</button>
             </div>
           </form>
         </div>
 
-        <!-- ══════════════ Onglet Graphe ══════════════ -->
+        <!-- ══ Graphe ══ -->
         <div class="tab-panel" id="tab-graph"></div>
 
       </div>
 
-    <!-- Graphe : frère de page-main dans content-layout, prend tout l'espace restant -->
     <div id="graph-full" style="display:none;flex:1;min-height:0;overflow:hidden">
       <aside class="sidebar">
         <div class="sidebar-section">
-          <h3>Statistiques</h3>
+          <h3>{{T "inventory.graph.stats"}}</h3>
           <div class="stat-grid">
             <div class="stat-card">
               <div class="stat-value" id="stat-hosts">—</div>
-              <div class="stat-label">Hôtes</div>
+              <div class="stat-label">{{T "col.hosts"}}</div>
             </div>
             <div class="stat-card">
               <div class="stat-value" id="stat-groups">—</div>
-              <div class="stat-label">Groupes</div>
+              <div class="stat-label">{{T "inventory.tab.groups"}}</div>
             </div>
             <div class="stat-card" style="grid-column:1/-1">
               <div class="stat-value" id="stat-links">—</div>
-              <div class="stat-label">Liaisons</div>
+              <div class="stat-label">{{T "inventory.graph.links"}}</div>
             </div>
           </div>
         </div>
         <div class="sidebar-section">
-          <h3>Légende</h3>
-          <div class="legend-item"><span class="legend-dot legend-host"></span><span>Hôte</span></div>
-          <div class="legend-item"><span class="legend-rect legend-group"></span><span>Groupe</span></div>
+          <h3>{{T "inventory.graph.legend"}}</h3>
+          <div class="legend-item"><span class="legend-dot legend-host"></span><span>{{T "inventory.graph.host"}}</span></div>
+          <div class="legend-item"><span class="legend-rect legend-group"></span><span>{{T "inventory.graph.group"}}</span></div>
         </div>
       </aside>
 
       <main class="graph-area">
         <div class="graph-toolbar">
-          <button class="btn" id="btn-fit">Ajuster la vue</button>
-          <button class="btn" id="btn-reset">Réinitialiser</button>
+          <button class="btn" id="btn-fit">{{T "inventory.graph.fit"}}</button>
+          <button class="btn" id="btn-reset">{{T "inventory.graph.reset"}}</button>
           <select id="select-layout" class="btn" onchange="changeLayout(this.value)" title="Disposition">
-            <option value="breadthfirst">Hiérarchique</option>
-            <option value="cose">Force</option>
+            <option value="breadthfirst">{{T "inventory.graph.layout.hierarchical"}}</option>
+            <option value="cose">{{T "inventory.graph.layout.force"}}</option>
           </select>
           <span class="graph-toolbar-info" id="toolbar-info"></span>
         </div>
         <div id="graph-container">
           <div class="graph-overlay" id="overlay-loading">
             <div class="spinner"></div>
-            <span>Chargement…</span>
+            <span>{{T "inventory.graph.loading"}}</span>
           </div>
           <div class="graph-overlay hidden" id="overlay-error">
             <span id="error-message"></span>
           </div>
           <div class="graph-overlay hidden" id="overlay-empty">
-            <span>Aucun hôte ou groupe trouvé.</span>
+            <span>{{T "inventory.graph.empty"}}</span>
           </div>
         </div>
       </main>
@@ -363,26 +391,24 @@
     </div>
   </div>
 
-  <!-- ══════ Modales ══════ -->
-
   {{if .IsManual}}
   <!-- Ajouter groupe -->
   <div class="modal-overlay" id="modal-add-group" onclick="if(event.target===this)closeModal('modal-add-group')">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Ajouter un groupe</h2>
+        <h2>{{T "inventory.modal.add_group"}}</h2>
         <button class="modal-close" onclick="closeModal('modal-add-group')">✕</button>
       </div>
       <form method="POST" action="/inventory/{{.Inventory.ID}}/groups">
         <div class="modal-body">
           <div class="form-group">
-            <label>Nom</label>
+            <label>{{T "form.name"}}</label>
             <input type="text" name="name" placeholder="webservers" required>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn" onclick="closeModal('modal-add-group')">Annuler</button>
-          <button type="submit" class="btn btn-primary">Créer</button>
+          <button type="button" class="btn" onclick="closeModal('modal-add-group')">{{T "btn.cancel"}}</button>
+          <button type="submit" class="btn btn-primary">{{T "btn.create"}}</button>
         </div>
       </form>
     </div>
@@ -392,30 +418,30 @@
   <div class="modal-overlay" id="modal-add-host" onclick="if(event.target===this)closeModal('modal-add-host')">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Ajouter un hôte</h2>
+        <h2>{{T "inventory.modal.add_host"}}</h2>
         <button class="modal-close" onclick="closeModal('modal-add-host')">✕</button>
       </div>
       <form method="POST" action="/inventory/{{.Inventory.ID}}/hosts">
         <div class="modal-body">
           <div class="form-group">
-            <label>Nom <span style="color:var(--accent)">*</span></label>
+            <label>{{T "col.name"}} <span style="color:var(--accent)">*</span></label>
             <input type="text" name="name" placeholder="srv-web-01" required>
           </div>
           <div class="form-group">
-            <label>IP / Adresse</label>
+            <label>{{T "inventory.modal.host_ip"}}</label>
             <input type="text" name="ip" placeholder="192.168.1.100">
           </div>
           <div class="form-group">
-            <label>Description</label>
+            <label>{{T "inventory.modal.host_desc"}}</label>
             <input type="text" name="description">
           </div>
           <div class="form-group">
-            <label>Variables Ansible <span style="font-size:11px;color:var(--text-muted)">(YAML, optionnel)</span></label>
+            <label>{{T "inventory.modal.host_vars"}}</label>
             <textarea name="vars" rows="3" style="font-family:monospace;font-size:12px;resize:vertical" placeholder="ansible_user: admin&#10;ansible_port: 22"></textarea>
           </div>
           {{if .Groups}}
           <div class="form-group">
-            <label>Groupes</label>
+            <label>{{T "inventory.modal.host_groups"}}</label>
             <div style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:10px">
               {{range .Groups}}
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
@@ -427,8 +453,8 @@
           {{end}}
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn" onclick="closeModal('modal-add-host')">Annuler</button>
-          <button type="submit" class="btn btn-primary">Ajouter</button>
+          <button type="button" class="btn" onclick="closeModal('modal-add-host')">{{T "btn.cancel"}}</button>
+          <button type="submit" class="btn btn-primary">{{T "btn.add"}}</button>
         </div>
       </form>
     </div>
@@ -438,32 +464,32 @@
   <div class="modal-overlay" id="modal-edit-host" onclick="if(event.target===this)closeModal('modal-edit-host')">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Modifier l'hôte</h2>
+        <h2>{{T "inventory.modal.edit_host"}}</h2>
         <button class="modal-close" onclick="closeModal('modal-edit-host')">✕</button>
       </div>
       <form id="form-edit-host" method="POST">
         <div class="modal-body">
-          <div id="edit-host-loading" style="text-align:center;color:var(--text-muted);padding:24px">Chargement…</div>
+          <div id="edit-host-loading" style="text-align:center;color:var(--text-muted);padding:24px">{{T "inventory.modal.loading"}}</div>
           <div id="edit-host-fields" style="display:none">
             <div class="form-group">
-              <label>Nom <span style="color:var(--accent)">*</span></label>
+              <label>{{T "col.name"}} <span style="color:var(--accent)">*</span></label>
               <input type="text" id="edit-host-name" name="name" required>
             </div>
             <div class="form-group">
-              <label>IP / Adresse</label>
+              <label>{{T "inventory.modal.host_ip"}}</label>
               <input type="text" id="edit-host-ip" name="ip">
             </div>
             <div class="form-group">
-              <label>Description</label>
+              <label>{{T "inventory.modal.host_desc"}}</label>
               <input type="text" id="edit-host-description" name="description">
             </div>
             <div class="form-group">
-              <label>Variables Ansible</label>
+              <label>{{T "inventory.tab.vars"}}</label>
               <textarea id="edit-host-vars" name="vars" rows="3" style="font-family:monospace;font-size:12px;resize:vertical"></textarea>
             </div>
             {{if .Groups}}
             <div class="form-group">
-              <label>Groupes</label>
+              <label>{{T "inventory.modal.host_groups"}}</label>
               <div style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:10px">
                 {{range .Groups}}
                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
@@ -476,10 +502,40 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn" onclick="closeModal('modal-edit-host')">Annuler</button>
-          <button type="submit" class="btn btn-primary">Enregistrer</button>
+          <button type="button" class="btn" onclick="closeModal('modal-edit-host')">{{T "btn.cancel"}}</button>
+          <button type="submit" class="btn btn-primary">{{T "btn.save"}}</button>
         </div>
       </form>
+    </div>
+  </div>
+  {{end}}
+
+  {{if eq .Inventory.Source "ad"}}
+  <!-- Modal ajout groupe LDAP -->
+  <div class="modal-overlay" id="modal-add-ad-group" onclick="if(event.target===this)closeModal('modal-add-ad-group')">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>{{T "inventory.source.ad.add_group"}}</h2>
+        <button class="modal-close" onclick="closeModal('modal-add-ad-group')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>{{T "col.name"}}</label>
+          <input type="text" id="modal-ad-name" placeholder="Servers">
+        </div>
+        <div class="form-group">
+          <label>Base DN</label>
+          <input type="text" id="modal-ad-base-dn" placeholder="OU=Servers,DC=example,DC=com" style="font-family:monospace">
+        </div>
+        <div class="form-group">
+          <label>{{T "inventory.source.ad.filter_label"}} <span style="font-size:11px;color:var(--text-muted)">{{T "inventory.source.ad.filter_optional"}}</span></label>
+          <input type="text" id="modal-ad-filter" placeholder="(memberOf=CN=Servers,...)" style="font-family:monospace">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="closeModal('modal-add-ad-group')">{{T "btn.cancel"}}</button>
+        <button type="button" class="btn btn-primary" onclick="confirmAddADGroup()">{{T "btn.add"}}</button>
+      </div>
     </div>
   </div>
   {{end}}
@@ -490,7 +546,6 @@
     const INVENTORY_ID = {{.Inventory.ID}};
     const INIT_TAB = '{{.Tab}}';
 
-    // ── Onglets ──────────────────────────────────────────────────────────────
     let graphLoaded = false;
     let graphInstance = null;
 
@@ -522,7 +577,6 @@
       btn.addEventListener('click', () => showTab(btn.dataset.tab));
     });
 
-    // ── Graphe ────────────────────────────────────────────────────────────────
     const overlayLoading = document.getElementById('overlay-loading');
     const overlayError   = document.getElementById('overlay-error');
     const overlayEmpty   = document.getElementById('overlay-empty');
@@ -542,13 +596,16 @@
         ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
+    const labelHost  = '{{T "inventory.graph.host"}}';
+    const labelGroup = '{{T "inventory.graph.group"}}';
+
     async function loadGraph() {
       const graph = new ForceGraph(document.getElementById('graph-container'));
       graphInstance = graph;
       showOverlay('overlay-loading');
       try {
         const resp = await fetch('/api/inventory/' + INVENTORY_ID + '/graph');
-        if (!resp.ok) throw new Error('Erreur serveur (' + resp.status + ')');
+        if (!resp.ok) throw new Error('Server error (' + resp.status + ')');
         const data = await resp.json();
         if (!data.nodes || data.nodes.length === 0) { showOverlay('overlay-empty'); return; }
         hideOverlays();
@@ -560,17 +617,16 @@
         document.getElementById('stat-hosts').textContent  = hosts;
         document.getElementById('stat-groups').textContent = groups;
         document.getElementById('stat-links').textContent  = data.links.length;
-        document.getElementById('toolbar-info').textContent = hosts + ' hôte' + (hosts !== 1 ? 's' : '') + ', ' + groups + ' groupe' + (groups !== 1 ? 's' : '');
+        document.getElementById('toolbar-info').textContent = hosts + ' host' + (hosts !== 1 ? 's' : '') + ', ' + groups + ' group' + (groups !== 1 ? 's' : '');
 
         graph.onSelect = (node, connected) => {
           detailsPanel.classList.add('open');
           detailsTitle.textContent = node.label;
-          const typeLabel = node.type === 'host' ? 'Hôte' : 'Groupe';
+          const typeLabel = node.type === 'host' ? labelHost : labelGroup;
           const badgeClass = node.type === 'host' ? 'badge-host' : 'badge-group';
           let html = `<div class="detail-row"><div class="detail-label">Type</div><div class="detail-value"><span class="badge ${badgeClass}">${typeLabel}</span></div></div>`;
           if (node.type === 'host' && node.ip) html += `<div class="detail-row"><div class="detail-label">IP</div><div class="detail-value">${esc(node.ip)}</div></div>`;
-          const connLabel = node.type === 'host' ? 'Groupes' : 'Hôtes';
-          html += `<div class="detail-row"><div class="detail-label">${connLabel}</div>`;
+          html += `<div class="detail-row"><div class="detail-label">${node.type === 'host' ? labelGroup : labelHost}s</div>`;
           if (connected.length) {
             html += '<div class="connected-list">';
             connected.forEach(c => { html += `<div class="connected-item">${esc(c.label)}</div>`; });
@@ -593,7 +649,6 @@
       if (graphInstance) graphInstance.setLayout(name);
     }
 
-    // ── Modales ──────────────────────────────────────────────────────────────
     function openModal(id)  { document.getElementById(id).classList.add('open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
@@ -601,7 +656,6 @@
       el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
     });
 
-    // ── Variables ────────────────────────────────────────────────────────────
     function addVarRow(key, val) {
       const row = document.createElement('div');
       row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:center';
@@ -613,7 +667,30 @@
       document.getElementById('vars-rows').appendChild(row);
     }
 
-    // ── Source : mode auth Proxmox ────────────────────────────────────────────
+    const btnDeleteLabel = '{{T "btn.delete"}}';
+
+    function confirmAddADGroup() {
+      const name   = document.getElementById('modal-ad-name').value.trim();
+      const baseDN = document.getElementById('modal-ad-base-dn').value.trim();
+      const filter = document.getElementById('modal-ad-filter').value.trim();
+      if (!name) return;
+      const tbody = document.getElementById('src-ad-groups-tbody');
+      const empty = document.getElementById('src-ad-groups-empty');
+      if (empty) empty.remove();
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${esc(name)}<input type="hidden" name="ad_group_name" value="${esc(name)}"></td>
+        <td style="font-family:monospace;font-size:12px">${esc(baseDN)}<input type="hidden" name="ad_group_base_dn" value="${esc(baseDN)}"></td>
+        <td style="font-family:monospace;font-size:12px;color:var(--text-muted)">${filter ? esc(filter) : '—'}<input type="hidden" name="ad_group_filter" value="${esc(filter)}"></td>
+        <td><button type="button" class="btn btn-sm btn-danger" onclick="this.closest('tr').remove()">${btnDeleteLabel}</button></td>
+      `;
+      tbody.appendChild(tr);
+      document.getElementById('modal-ad-name').value = '';
+      document.getElementById('modal-ad-base-dn').value = '';
+      document.getElementById('modal-ad-filter').value = '';
+      closeModal('modal-add-ad-group');
+    }
+
     function setSourceAuthMode(mode) {
       const api = document.getElementById('src-proxmox-api');
       const ssh = document.getElementById('src-proxmox-ssh');
@@ -628,7 +705,6 @@
       if (tk) tk.style.display = mode === 'token' ? '' : 'none';
     }
 
-    // ── Edit hôte ────────────────────────────────────────────────────────────
     function openEditHost(hostId) {
       const form = document.getElementById('form-edit-host');
       if (!form) return;
@@ -649,15 +725,13 @@
           document.getElementById('edit-host-loading').style.display = 'none';
           document.getElementById('edit-host-fields').style.display = '';
         })
-        .catch(() => { document.getElementById('edit-host-loading').textContent = 'Erreur de chargement.'; });
+        .catch(() => { document.getElementById('edit-host-loading').textContent = 'Error.'; });
     }
 
-
-    // ── Sync ──────────────────────────────────────────────────────────────────
     async function syncInventory() {
       const btn = document.getElementById('btn-sync');
       btn.disabled = true;
-      btn.textContent = '↻ En cours…';
+      btn.textContent = '↻ …';
       try {
         await fetch('/inventory/' + INVENTORY_ID + '/sync', {method: 'POST'});
       } finally {
@@ -665,9 +739,37 @@
       }
     }
 
-    // ── Init ──────────────────────────────────────────────────────────────────
+    function proxmoxRenderTags(prefix) {
+      const hidden = document.getElementById(prefix + '-proxmox-tags-hidden');
+      const area   = document.getElementById(prefix + '-proxmox-tags-area');
+      if (!hidden || !area) return;
+      area.innerHTML = '';
+      hidden.value.split(',').map(t => t.trim()).filter(t => t).forEach(tag => {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:var(--accent-dim,rgba(79,110,247,.12));color:var(--accent,#4f6ef7);padding:3px 10px;border-radius:99px;font-size:12px;font-weight:500';
+        chip.innerHTML = esc(tag) + ' <button type="button" data-tag="' + esc(tag) + '" style="background:none;border:none;cursor:pointer;padding:0;font-size:14px;color:inherit;line-height:1;margin-left:2px" onclick="proxmoxRemoveTag(\'src\',this)">×</button>';
+        area.appendChild(chip);
+      });
+    }
+    function proxmoxAddTag(prefix) {
+      const input = document.getElementById(prefix + '-proxmox-tag-input');
+      const tag   = input.value.trim();
+      if (!tag) return;
+      const hidden = document.getElementById(prefix + '-proxmox-tags-hidden');
+      const tags   = hidden.value ? hidden.value.split(',').map(t => t.trim()).filter(t => t) : [];
+      if (!tags.includes(tag)) { tags.push(tag); hidden.value = tags.join(','); proxmoxRenderTags(prefix); }
+      input.value = '';
+    }
+    function proxmoxRemoveTag(prefix, btn) {
+      const tag    = btn.dataset.tag;
+      const hidden = document.getElementById(prefix + '-proxmox-tags-hidden');
+      const tags   = hidden.value.split(',').map(t => t.trim()).filter(t => t && t !== tag);
+      hidden.value = tags.join(',');
+      proxmoxRenderTags(prefix);
+    }
+    proxmoxRenderTags('src');
+
     showTab(INIT_TAB || 'groups');
-    // Si l'onglet vars est actif et qu'il n'y a pas de lignes, en ajouter une vide
     if ((INIT_TAB === 'vars' || !INIT_TAB) && document.getElementById('vars-rows').children.length === 0) {
       addVarRow('', '');
     }

@@ -4,36 +4,13 @@
   <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gomme — Playbooks</title>
+  <title>Gomme — {{T "playbooks.title"}}</title>
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
   <div class="app-layout">
 
-    <nav class="navbar">
-      <span class="nav-brand">Gomme</span>
-      <div class="nav-links">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/inventory/list">Inventaire</a>
-        <a href="/repository">Repositories</a>
-        <a href="/playbooks" class="active">Playbooks</a>
-        <a href="/tasks">Tâches</a>
-        <a href="/history">Historique</a>
-        <a href="/organizations">Organisations</a>
-        <a href="/credentials">Identifiants</a>
-      </div>
-      <div class="nav-user">
-        <details class="nav-dropdown">
-          <summary>{{.User.Username}}</summary>
-          <div class="nav-dropdown-menu">
-            <a href="/profile">Profil</a>
-            {{if .User.IsAdmin}}<a href="/admin/users">Administration</a>{{end}}
-            <div class="dropdown-sep"></div>
-            <a href="/logout" class="dropdown-danger">Déconnexion</a>
-          </div>
-        </details>
-      </div>
-    </nav>
+    {{template "navbar" .}}
 
     <div class="content-layout" style="overflow-y:auto;">
       <div class="page-content">
@@ -42,10 +19,10 @@
         {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
 
         <div class="page-header">
-          <h1 class="page-title">Playbooks</h1>
+          <h1 class="page-title">{{T "playbooks.title"}}</h1>
           <div style="display:flex;gap:8px">
-            <button class="btn btn-primary" onclick="openModal('modal-new')">+ Nouveau playbook</button>
-            <a href="/repository" class="btn">Gérer les repositories</a>
+            <button class="btn btn-primary" onclick="openModal('modal-new')">{{T "btn.new_playbook"}}</button>
+            <a href="/repository" class="btn">{{T "playbooks.list.manage_repos"}}</a>
           </div>
         </div>
 
@@ -53,11 +30,11 @@
           <table class="table">
             <thead>
               <tr>
-                <th>Nom</th>
+                <th>{{T "col.name"}}</th>
                 <th>Repository</th>
-                <th>Chemin</th>
-                <th>Organisation</th>
-                <th>Actions</th>
+                <th>{{T "col.path"}}</th>
+                <th>{{T "col.organization"}}</th>
+                <th>{{T "col.actions"}}</th>
               </tr>
             </thead>
             <tbody>
@@ -70,20 +47,20 @@
                   {{if .Organization}}
                   <span class="badge badge-host">{{.Organization.Name}}</span>
                   {{else}}
-                  <span style="color:var(--text-muted);font-size:12px">— personnel —</span>
+                  <span style="color:var(--text-muted);font-size:12px">{{T "playbooks.list.personal"}}</span>
                   {{end}}
                 </td>
                 <td>
                   <div class="actions">
-                    <button type="button" class="btn btn-sm btn-primary" onclick="openLaunch({{.ID}}, '{{.Name}}')">Lancer</button>
-                    {{if .CanEdit}}<a href="/playbooks/{{.ID}}/edit" class="btn btn-sm">Modifier</a>{{end}}
+                    <button type="button" class="btn btn-sm btn-primary" onclick="openLaunch({{.ID}}, '{{.Name}}')">{{T "playbooks.list.launch"}}</button>
+                    {{if .CanEdit}}<a href="/playbooks/{{.ID}}/edit" class="btn btn-sm">{{T "btn.edit"}}</a>{{end}}
                   </div>
                 </td>
               </tr>
               {{else}}
               <tr>
                 <td colspan="5" style="text-align:center;color:var(--text-muted);padding:32px">
-                  Aucun playbook — créez-en un ou synchronisez un <a href="/repository">repository</a>
+                  {{T "playbooks.list.no_items"}}
                 </td>
               </tr>
               {{end}}
@@ -99,39 +76,39 @@
   <div class="modal-overlay" id="modal-new">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Nouveau playbook</h2>
+        <h2>{{T "btn.new_playbook"}}</h2>
         <button class="modal-close" onclick="closeModal('modal-new')">✕</button>
       </div>
       <form method="POST" action="/playbooks">
         <div class="modal-body">
           <div class="form-group">
-            <label>Nom</label>
+            <label>{{T "form.name"}}</label>
             <input type="text" name="name" placeholder="Mon playbook" required>
           </div>
           <div class="form-group">
             <label>Repository</label>
             <select name="repository_id" id="new-repo-select" onchange="loadNewFiles(this.value)" required>
-              <option value="">— Sélectionner —</option>
+              <option value="">{{T "playbooks.run.choose"}}</option>
               {{range .Repositories}}
               <option value="{{.ID}}">{{.Name}}</option>
               {{end}}
             </select>
           </div>
           <div class="form-group">
-            <label>Fichier playbook</label>
+            <label>{{T "playbooks.list.playbook_file"}}</label>
             <select name="path" id="new-file-select">
-              <option value="">— Sélectionner d'abord un repository —</option>
+              <option value="">{{T "playbooks.list.select_repo_first"}}</option>
             </select>
-            <input type="text" name="path_manual" id="new-path-manual" placeholder="ou saisir le chemin manuellement"
+            <input type="text" name="path_manual" id="new-path-manual" placeholder="{{T "playbooks.list.path_manual"}}"
               style="margin-top:6px" oninput="syncPath(this.value)">
             <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
-              Ex : playbook.yml ou sous-dossier/playbook.yml
+              {{T "playbooks.list.path_hint"}}
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn" onclick="closeModal('modal-new')">Annuler</button>
-          <button type="submit" class="btn btn-primary">Créer</button>
+          <button type="button" class="btn" onclick="closeModal('modal-new')">{{T "btn.cancel"}}</button>
+          <button type="submit" class="btn btn-primary">{{T "btn.create"}}</button>
         </div>
       </form>
     </div>
@@ -141,22 +118,29 @@
   <div class="modal-overlay" id="modal-launch" onclick="if(event.target===this)closeLaunch()">
     <div class="modal" style="max-width:560px">
       <div class="modal-header">
-        <h2 class="modal-title" id="launch-title">Lancer</h2>
+        <h2 class="modal-title" id="launch-title">{{T "playbooks.list.launch"}}</h2>
         <button class="modal-close" onclick="closeLaunch()">✕</button>
       </div>
       <form id="launch-form" method="POST">
         <div class="modal-body" id="launch-body">
-          <div style="color:var(--text-muted);text-align:center;padding:16px">Chargement…</div>
+          <div style="color:var(--text-muted);text-align:center;padding:16px">{{T "playbooks.list.loading"}}</div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn" onclick="closeLaunch()">Annuler</button>
-          <button type="submit" class="btn btn-primary">▶ Lancer</button>
+          <button type="button" class="btn" onclick="closeLaunch()">{{T "btn.cancel"}}</button>
+          <button type="submit" class="btn btn-primary">{{T "playbooks.list.launch"}}</button>
         </div>
       </form>
     </div>
   </div>
 
   <script>
+    const msgLoading      = '{{T "playbooks.list.loading"}}';
+    const msgNoFiles      = '{{T "playbooks.list.no_files"}}';
+    const msgLoadError    = '{{T "playbooks.list.load_error"}}';
+    const msgLaunchError  = '{{T "playbooks.list.launch_error"}}';
+    const msgEnable       = '{{T "playbooks.run.enable"}}';
+    const msgChoose       = '{{T "playbooks.run.choose"}}';
+
     function openModal(id)  { document.getElementById(id).classList.add('open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
@@ -167,24 +151,24 @@
     function loadNewFiles(repoId) {
       const sel = document.getElementById('new-file-select');
       if (!repoId) {
-        sel.innerHTML = '<option value="">— Sélectionner d\'abord un repository —</option>';
+        sel.innerHTML = '<option value="">' + msgLoading + '</option>';
         return;
       }
       sel.disabled = true;
-      sel.innerHTML = '<option>Chargement…</option>';
+      sel.innerHTML = '<option>' + msgLoading + '</option>';
       fetch('/api/repository/' + repoId + '/files')
         .then(r => r.json())
         .then(data => {
           sel.disabled = false;
           if (!data.files || data.files.length === 0) {
-            sel.innerHTML = '<option value="">— Aucun fichier (repo non synchronisé) —</option>';
+            sel.innerHTML = '<option value="">' + msgNoFiles + '</option>';
             return;
           }
           sel.innerHTML = data.files.map(f => `<option value="${f}">${f}</option>`).join('');
         })
         .catch(() => {
           sel.disabled = false;
-          sel.innerHTML = '<option value="">— Erreur de chargement —</option>';
+          sel.innerHTML = '<option value="">' + msgLoadError + '</option>';
         });
     }
 
@@ -196,7 +180,6 @@
         const res = await fetch('/api/playbooks/' + id + '/survey');
         const fields = await res.json();
         if (!fields || fields.length === 0) {
-          // Pas de survey : soumettre directement
           const f = document.createElement('form');
           f.method = 'POST';
           f.action = '/playbooks/' + id + '/run';
@@ -212,12 +195,12 @@
           const star = f.Required ? '<span style="color:var(--accent)"> *</span>' : '';
           let input;
           if (f.Type === 'bool') {
-            input = `<label class="form-check"><input type="checkbox" name="survey_${f.VarName}"> Activer</label>`;
+            input = `<label class="form-check"><input type="checkbox" name="survey_${f.VarName}"> ${msgEnable}</label>`;
           } else if (f.Type === 'select') {
             const def = f.Default || '';
             const opts = (f.Options || '').split('\n').map(l => l.trim()).filter(Boolean)
               .map(l => { const p = l.split('|'); const v = p.length > 1 ? p[1].trim() : p[0].trim(); const sel = v === def ? ' selected' : ''; return `<option value="${v}"${sel}>${p[0].trim()}</option>`; }).join('');
-            input = `<select name="survey_${f.VarName}" ${req}><option value="">— Choisir —</option>${opts}</select>`;
+            input = `<select name="survey_${f.VarName}" ${req}><option value="">${msgChoose}</option>${opts}</select>`;
           } else if (f.Type === 'textarea') {
             input = `<textarea name="survey_${f.VarName}" rows="3" style="resize:vertical" ${req}></textarea>`;
           } else {
@@ -228,18 +211,15 @@
         document.getElementById('modal-launch').classList.add('open');
       } catch(e) {
         const body = document.getElementById('launch-body');
-        if (body) body.innerHTML = '<p style="color:var(--accent);margin:0">Erreur de chargement</p>';
+        if (body) body.innerHTML = '<p style="color:var(--accent);margin:0">' + msgLaunchError + '</p>';
         document.getElementById('modal-launch').classList.add('open');
       }
     }
 
     function closeLaunch() { document.getElementById('modal-launch').classList.remove('open'); }
 
-    // Synchronise le select et l'input texte : le champ soumis est "path" (select)
-    // Si l'utilisateur tape dans l'input manuel, on l'utilise comme valeur du select
     function syncPath(val) {
       const sel = document.getElementById('new-file-select');
-      // Ajouter ou mettre à jour l'option manuelle
       let opt = sel.querySelector('option[data-manual]');
       if (!opt) {
         opt = document.createElement('option');

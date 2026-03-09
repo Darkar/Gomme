@@ -8,5 +8,6 @@ type User struct {
 	PasswordHash       string    `gorm:"not null"`
 	IsAdmin            bool      `gorm:"default:false"`
 	MustChangePassword bool      `gorm:"default:false"`
+	Language           string    `gorm:"default:''"`
 	CreatedAt          time.Time
 }

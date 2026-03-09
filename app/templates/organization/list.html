@@ -4,43 +4,20 @@
   <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gomme — Organisations</title>
+  <title>Gomme — {{T "org.title"}}</title>
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
   <div class="app-layout">
 
-    <nav class="navbar">
-      <span class="nav-brand">Gomme</span>
-      <div class="nav-links">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/inventory/list">Inventaire</a>
-        <a href="/repository">Repositories</a>
-        <a href="/playbooks">Playbooks</a>
-        <a href="/tasks">Tâches</a>
-        <a href="/history">Historique</a>
-        <a href="/organizations" class="active">Organisations</a>
-        <a href="/credentials">Identifiants</a>
-      </div>
-      <div class="nav-user">
-        <details class="nav-dropdown">
-          <summary>{{.User.Username}}</summary>
-          <div class="nav-dropdown-menu">
-            <a href="/profile">Profil</a>
-            {{if .User.IsAdmin}}<a href="/admin/users">Administration</a>{{end}}
-            <div class="dropdown-sep"></div>
-            <a href="/logout" class="dropdown-danger">Déconnexion</a>
-          </div>
-        </details>
-      </div>
-    </nav>
+    {{template "navbar" .}}
 
     <div class="content-layout" style="overflow-y:auto;">
       <div class="page-content">
 
         <div class="page-header">
-          <h1 class="page-title">Organisations</h1>
-          <button class="btn btn-primary" onclick="openModal('modal-create')">+ Nouvelle organisation</button>
+          <h1 class="page-title">{{T "org.title"}}</h1>
+          <button class="btn btn-primary" onclick="openModal('modal-create')">{{T "btn.new_org"}}</button>
         </div>
 
         {{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
@@ -50,11 +27,11 @@
           <table class="table">
             <thead>
               <tr>
-                <th>Nom</th>
-                <th>Propriétaire</th>
-                <th>Membres</th>
-                <th>Rôle</th>
-                <th>Actions</th>
+                <th>{{T "col.name"}}</th>
+                <th>{{T "col.owner"}}</th>
+                <th>{{T "col.members"}}</th>
+                <th>{{T "col.role"}}</th>
+                <th>{{T "col.actions"}}</th>
               </tr>
             </thead>
             <tbody>
@@ -65,21 +42,21 @@
                 <td style="color:var(--text-muted)">{{.MemberCount}}</td>
                 <td>
                   {{if .IsOwner}}
-                  <span class="badge badge-running">Propriétaire</span>
+                  <span class="badge badge-running">{{T "badge.owner"}}</span>
                   {{else}}
-                  <span class="badge badge-pending">Membre</span>
+                  <span class="badge badge-pending">{{T "badge.member"}}</span>
                   {{end}}
                 </td>
                 <td>
                   {{if .IsOwner}}
-                  <a href="/organizations/{{.ID}}" class="btn btn-sm">Gérer</a>
+                  <a href="/organizations/{{.ID}}" class="btn btn-sm">{{T "btn.manage"}}</a>
                   {{else}}
-                  <a href="/organizations/{{.ID}}" class="btn btn-sm">Voir</a>
+                  <a href="/organizations/{{.ID}}" class="btn btn-sm">{{T "btn.view"}}</a>
                   {{end}}
                 </td>
               </tr>
               {{else}}
-              <tr><td colspan="5" style="color:var(--text-muted);text-align:center">Aucune organisation</td></tr>
+              <tr><td colspan="5" style="color:var(--text-muted);text-align:center">{{T "org.no_items"}}</td></tr>
               {{end}}
             </tbody>
           </table>
@@ -93,19 +70,19 @@
   <div class="modal-overlay" id="modal-create">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Nouvelle organisation</h2>
+        <h2>{{T "org.modal.create"}}</h2>
         <button class="modal-close" onclick="closeModal('modal-create')">✕</button>
       </div>
       <form method="POST" action="/organizations">
         <div class="modal-body">
           <div class="form-group">
-            <label>Nom</label>
+            <label>{{T "form.name"}}</label>
             <input type="text" name="name" required autocomplete="off">
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn" onclick="closeModal('modal-create')">Annuler</button>
-          <button type="submit" class="btn btn-primary">Créer</button>
+          <button type="button" class="btn" onclick="closeModal('modal-create')">{{T "btn.cancel"}}</button>
+          <button type="submit" class="btn btn-primary">{{T "btn.create"}}</button>
         </div>
       </form>
     </div>

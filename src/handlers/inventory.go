@@ -17,17 +17,22 @@ import (
 type InventoryView struct {
 	models.Inventory
 	ParsedAuthMode string
-	// API
+	// Proxmox API
 	ParsedURL        string
 	ParsedUser       string
 	ParsedNode       string
 	ParsedInsecure   bool
 	ParsedFilterTags string
 	ParsedAPITokenID string
-	// SSH
+	// Proxmox SSH
 	ParsedSSHHost string
 	ParsedSSHPort string
 	ParsedSSHUser string
+	// ActiveDirectory / LDAP
+	ParsedADURL      string
+	ParsedADBindDN   string
+	ParsedADInsecure bool
+	ParsedADGroups   []inventory.ADGroupConfig
 	// Permissions
 	CanEdit   bool
 	CanDelete bool
@@ -44,6 +49,12 @@ type InventoryListData struct {
 
 func parseStoredConfig(configJSON string) inventory.StoredProxmoxConfig {
 	var cfg inventory.StoredProxmoxConfig
+	json.Unmarshal([]byte(configJSON), &cfg) //nolint — zero value si JSON invalide
+	return cfg
+}
+
+func parseStoredADConfig(configJSON string) inventory.StoredADConfig {
+	var cfg inventory.StoredADConfig
 	json.Unmarshal([]byte(configJSON), &cfg) //nolint — zero value si JSON invalide
 	return cfg
 }
@@ -68,24 +79,29 @@ func (h *Handler) InventoryList(c echo.Context) error {
 		h.DB.Model(&models.Host{}).Where("inventory_id = ?", inv.ID).Count(&count)
 		data.HostCounts[inv.ID] = count
 
-		cfg := parseStoredConfig(inv.Config)
 		canEdit := inv.OrganizationID == nil || h.checkOrgAccess(user, *inv.OrganizationID, "update_inventory")
 		canDelete := inv.OrganizationID == nil || h.checkOrgAccess(user, *inv.OrganizationID, "delete_inventory")
-		data.Inventories = append(data.Inventories, InventoryView{
-			Inventory:        inv,
-			ParsedAuthMode:   cfg.AuthMode,
-			ParsedURL:        cfg.URL,
-			ParsedUser:       cfg.User,
-			ParsedNode:       cfg.Node,
-			ParsedInsecure:   cfg.Insecure,
-			ParsedFilterTags: cfg.FilterTags,
-			ParsedAPITokenID: cfg.APITokenID,
-			ParsedSSHHost:    cfg.SSHHost,
-			ParsedSSHPort:    cfg.SSHPort,
-			ParsedSSHUser:    cfg.SSHUser,
-			CanEdit:          canEdit,
-			CanDelete:        canDelete,
-		})
+		view := InventoryView{Inventory: inv, CanEdit: canEdit, CanDelete: canDelete}
+		if inv.Source == "ad" {
+			ad := parseStoredADConfig(inv.Config)
+			view.ParsedADURL = ad.URL
+			view.ParsedADBindDN = ad.BindDN
+			view.ParsedADInsecure = ad.Insecure
+			view.ParsedADGroups = ad.Groups
+		} else {
+			cfg := parseStoredConfig(inv.Config)
+			view.ParsedAuthMode = cfg.AuthMode
+			view.ParsedURL = cfg.URL
+			view.ParsedUser = cfg.User
+			view.ParsedNode = cfg.Node
+			view.ParsedInsecure = cfg.Insecure
+			view.ParsedFilterTags = cfg.FilterTags
+			view.ParsedAPITokenID = cfg.APITokenID
+			view.ParsedSSHHost = cfg.SSHHost
+			view.ParsedSSHPort = cfg.SSHPort
+			view.ParsedSSHUser = cfg.SSHUser
+		}
+		data.Inventories = append(data.Inventories, view)
 	}
 	return c.Render(http.StatusOK, "inventory/list", data)
 }
@@ -153,6 +169,40 @@ func (h *Handler) buildInventoryConfig(sourceType string, c echo.Context, existi
 	switch sourceType {
 	case "manual":
 		return "", nil
+	case "ad":
+		existing := parseStoredADConfig(existingConfig)
+		cfg := inventory.StoredADConfig{
+			URL:         c.FormValue("ad_url"),
+			BindDN:      c.FormValue("ad_bind_dn"),
+			Insecure:    c.FormValue("ad_insecure") == "on",
+			PasswordEnc: existing.PasswordEnc,
+		}
+		if pwd := c.FormValue("ad_password"); pwd != "" {
+			enc, err := crypto.Encrypt(h.Config.SecretKey, pwd)
+			if err != nil {
+				return "", fmt.Errorf("chiffrement mot de passe AD: %w", err)
+			}
+			cfg.PasswordEnc = enc
+		}
+		params, _ := c.FormParams()
+		names := params["ad_group_name"]
+		baseDNs := params["ad_group_base_dn"]
+		filters := params["ad_group_filter"]
+		for i, name := range names {
+			if name == "" {
+				continue
+			}
+			g := inventory.ADGroupConfig{Name: name}
+			if i < len(baseDNs) {
+				g.BaseDN = baseDNs[i]
+			}
+			if i < len(filters) {
+				g.Filter = filters[i]
+			}
+			cfg.Groups = append(cfg.Groups, g)
+		}
+		b, _ := json.Marshal(cfg)
+		return string(b), nil
 	case "proxmox":
 		existing := parseStoredConfig(existingConfig)
 		authMode := c.FormValue("proxmox_auth_mode")
@@ -330,19 +380,25 @@ func (h *Handler) InventoryDetail(c echo.Context) error {
 		tab = "groups"
 	}
 
-	cfg := parseStoredConfig(inv.Config)
-	parsedSource := InventoryView{
-		Inventory:        inv,
-		ParsedAuthMode:   cfg.AuthMode,
-		ParsedURL:        cfg.URL,
-		ParsedUser:       cfg.User,
-		ParsedNode:       cfg.Node,
-		ParsedInsecure:   cfg.Insecure,
-		ParsedFilterTags: cfg.FilterTags,
-		ParsedAPITokenID: cfg.APITokenID,
-		ParsedSSHHost:    cfg.SSHHost,
-		ParsedSSHPort:    cfg.SSHPort,
-		ParsedSSHUser:    cfg.SSHUser,
+	parsedSource := InventoryView{Inventory: inv}
+	if inv.Source == "ad" {
+		ad := parseStoredADConfig(inv.Config)
+		parsedSource.ParsedADURL = ad.URL
+		parsedSource.ParsedADBindDN = ad.BindDN
+		parsedSource.ParsedADInsecure = ad.Insecure
+		parsedSource.ParsedADGroups = ad.Groups
+	} else {
+		cfg := parseStoredConfig(inv.Config)
+		parsedSource.ParsedAuthMode = cfg.AuthMode
+		parsedSource.ParsedURL = cfg.URL
+		parsedSource.ParsedUser = cfg.User
+		parsedSource.ParsedNode = cfg.Node
+		parsedSource.ParsedInsecure = cfg.Insecure
+		parsedSource.ParsedFilterTags = cfg.FilterTags
+		parsedSource.ParsedAPITokenID = cfg.APITokenID
+		parsedSource.ParsedSSHHost = cfg.SSHHost
+		parsedSource.ParsedSSHPort = cfg.SSHPort
+		parsedSource.ParsedSSHUser = cfg.SSHUser
 	}
 
 	var orgIDVal uint

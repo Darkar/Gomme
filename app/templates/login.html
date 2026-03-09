@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gomme - Connexion</title>
+  <title>Gomme — {{T "login.title"}}</title>
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
       <div class="login-logo">
         <div style="width:52px;height:52px;background:#ee0000;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:#fff;margin-bottom:14px">G</div>
         <h1>Gomme</h1>
-        <p>Gestionnaire de playbooks Ansible</p>
+        <p>{{T "login.subtitle"}}</p>
       </div>
 
       {{if .Error}}
@@ -22,7 +22,7 @@
 
       <form method="POST" action="/login">
         <div class="form-group">
-          <label for="username">Identifiant</label>
+          <label for="username">{{T "login.username"}}</label>
           <input
             type="text"
             id="username"
@@ -33,7 +33,7 @@
           >
         </div>
         <div class="form-group">
-          <label for="password">Mot de passe</label>
+          <label for="password">{{T "login.password"}}</label>
           <input
             type="password"
             id="password"
@@ -42,7 +42,7 @@
             required
           >
         </div>
-        <button type="submit" class="btn btn-primary btn-full">Se connecter</button>
+        <button type="submit" class="btn btn-primary btn-full">{{T "login.submit"}}</button>
       </form>
     </div>
   </div>
